@@ -1,5 +1,7 @@
 const initialHostByRequest = new Map();
 const MAX_TRACKED_REQUESTS = 1000;
+const STORAGE_KEY = "exceptionDomains";
+const exceptionDomains = new Set();
 
 const getRootDomain = (hostname) => {
   if (!hostname) {
@@ -38,6 +40,27 @@ const trackInitialHost = (requestId, host) => {
   initialHostByRequest.set(requestId, host);
 };
 
+const updateExceptionDomains = (domains = []) => {
+  exceptionDomains.clear();
+  domains
+    .filter((domain) => typeof domain === "string" && domain.trim())
+    .forEach((domain) => exceptionDomains.add(domain.trim().toLowerCase()));
+};
+
+browser.storage.sync
+  .get(STORAGE_KEY)
+  .then((stored) => updateExceptionDomains(stored[STORAGE_KEY]))
+  .catch((error) => {
+    console.error("Failed to load exception domains", error);
+    updateExceptionDomains();
+  });
+
+browser.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "sync" && changes[STORAGE_KEY]) {
+    updateExceptionDomains(changes[STORAGE_KEY].newValue);
+  }
+});
+
 browser.webRequest.onBeforeRequest.addListener(
   (details) => {
     if (details.type !== "main_frame") {
@@ -75,6 +98,10 @@ browser.webRequest.onHeadersReceived.addListener(
     try {
       const initialHost = initialHostByRequest.get(details.requestId) || new URL(details.url).hostname;
       const redirectHost = new URL(redirectLocation, details.url).hostname;
+      if (exceptionDomains.has(getRootDomain(initialHost))) {
+        initialHostByRequest.delete(details.requestId);
+        return {};
+      }
       if (getRootDomain(initialHost) !== getRootDomain(redirectHost)) {
         initialHostByRequest.delete(details.requestId);
         return { cancel: true };
