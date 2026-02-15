@@ -1,7 +1,6 @@
 ## Concept
 
 Une extension Firefox interceptant les requêtes HTTP de navigation pour bloquer les redirections automatiques basées sur la géolocalisation ou les paramètres régionaux (codes HTTP 301, 302 vers des TLD différents). Elle garantit l'accès au domaine de premier niveau (TLD) explicitement saisi par l'utilisateur en interrompant la chaîne de redirection et en forçant le chargement de l'URL initiale.
-Une popup permet aussi d'ajouter le domaine courant à une liste blanche (stockée via `browser.storage.sync`) pour exclure certains flux légitimes.
 
 ## Stack Technique
 
