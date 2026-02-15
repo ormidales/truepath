@@ -100,13 +100,18 @@ browser.webRequest.onBeforeSendHeaders.addListener(
       return {};
     }
 
+    let host = "";
     try {
-      const host = new URL(details.url).hostname;
+      host = new URL(details.url).hostname;
       if (exceptionDomains.has(getRootDomain(host))) {
         return {};
       }
 
-      const requestHeaders = Array.isArray(details.requestHeaders) ? [...details.requestHeaders] : [];
+      if (!Array.isArray(details.requestHeaders)) {
+        return {};
+      }
+
+      const requestHeaders = [...details.requestHeaders];
       const spoofedLanguage = buildAcceptLanguage(host);
       const acceptLanguageHeader = requestHeaders.find(
         (header) => header && typeof header.name === "string" && header.name.toLowerCase() === "accept-language"
@@ -119,7 +124,8 @@ browser.webRequest.onBeforeSendHeaders.addListener(
       }
 
       return { requestHeaders };
-    } catch (_error) {
+    } catch (error) {
+      console.warn("Failed to adjust Accept-Language header for host", host, error);
       return {};
     }
   },
