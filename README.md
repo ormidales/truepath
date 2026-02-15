@@ -1,6 +1,6 @@
 ## Concept
 
-Une extension Firefox interceptant les requêtes HTTP de navigation pour bloquer les redirections automatiques basées sur la géolocalisation ou les paramètres régionaux (codes HTTP 301, 302 vers des TLD différents). Elle garantit l'accès au domaine de premier niveau (TLD) explicitement saisi par l'utilisateur en interrompant la chaîne de redirection et en forçant le chargement de l'URL initiale. En complément, elle ajuste dynamiquement l'en-tête `Accept-Language` des requêtes de navigation pour limiter les blocages serveur de type `403 Forbidden` quand le routage régional est empêché.
+Une extension Firefox interceptant les requêtes HTTP de navigation pour bloquer les redirections automatiques basées sur la géolocalisation ou les paramètres régionaux (codes HTTP 301, 302 vers des TLD différents). Elle garantit l'accès au domaine de premier niveau (TLD) explicitement saisi par l'utilisateur en interrompant la chaîne de redirection et en forçant le chargement de l'URL initiale.
 
 ## Stack Technique
 
