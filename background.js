@@ -2,6 +2,15 @@ const initialHostByRequest = new Map();
 const MAX_TRACKED_REQUESTS = 1000;
 const STORAGE_KEY = "exceptionDomains";
 const exceptionDomains = new Set();
+const DEFAULT_ACCEPT_LANGUAGE = "en-US,en;q=0.9";
+const ACCEPT_LANGUAGE_BY_TLD = new Map([
+  ["de", "de-DE,de;q=0.9,en;q=0.7"],
+  ["es", "es-ES,es;q=0.9,en;q=0.7"],
+  ["fr", "fr-FR,fr;q=0.9,en;q=0.7"],
+  ["it", "it-IT,it;q=0.9,en;q=0.7"],
+  ["nl", "nl-NL,nl;q=0.9,en;q=0.7"],
+  ["pt", "pt-PT,pt;q=0.9,en;q=0.7"]
+]);
 
 const getRootDomain = (hostname) => {
   if (!hostname) {
@@ -29,6 +38,12 @@ const readLocationHeader = (headers = []) => {
   );
 
   return locationHeader && typeof locationHeader.value === "string" ? locationHeader.value : "";
+};
+
+const buildAcceptLanguage = (hostname) => {
+  const labels = hostname.toLowerCase().split(".").filter(Boolean);
+  const tld = labels[labels.length - 1] || "";
+  return ACCEPT_LANGUAGE_BY_TLD.get(tld) || DEFAULT_ACCEPT_LANGUAGE;
 };
 
 const trackInitialHost = (requestId, host) => {
@@ -77,6 +92,39 @@ browser.webRequest.onBeforeRequest.addListener(
     }
   },
   { urls: ["<all_urls>"], types: ["main_frame"] }
+);
+
+browser.webRequest.onBeforeSendHeaders.addListener(
+  (details) => {
+    if (details.type !== "main_frame") {
+      return {};
+    }
+
+    try {
+      const host = new URL(details.url).hostname;
+      if (exceptionDomains.has(getRootDomain(host))) {
+        return {};
+      }
+
+      const requestHeaders = Array.isArray(details.requestHeaders) ? [...details.requestHeaders] : [];
+      const spoofedLanguage = buildAcceptLanguage(host);
+      const acceptLanguageHeader = requestHeaders.find(
+        (header) => header && typeof header.name === "string" && header.name.toLowerCase() === "accept-language"
+      );
+
+      if (acceptLanguageHeader) {
+        acceptLanguageHeader.value = spoofedLanguage;
+      } else {
+        requestHeaders.push({ name: "Accept-Language", value: spoofedLanguage });
+      }
+
+      return { requestHeaders };
+    } catch (_error) {
+      return {};
+    }
+  },
+  { urls: ["<all_urls>"], types: ["main_frame"] },
+  ["blocking", "requestHeaders"]
 );
 
 browser.webRequest.onHeadersReceived.addListener(
