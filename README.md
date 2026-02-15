@@ -8,3 +8,11 @@ Une extension Firefox interceptant les requêtes HTTP de navigation pour bloquer
 * **JavaScript Vanilla (ES2022)** : Garantit une exécution rapide et légère du background worker sans surcharge liée à un framework externe.
 * **HTML5/CSS3** : Interface utilisateur de la popup d'extension minimale et réactive pour la gestion des règles.
 * **Vite** : Outil de build pour la compilation, la minification des assets et la gestion du rechargement à chaud durant le développement.
+
+## Idées de logos
+
+* Minimalist logo for a browser extension, a crossed-out globe icon, flat vector design, solid blue and red colors, clean white background.
+* Clean icon of a compass breaking a circular redirect arrow, dark mode aesthetics, neon green accents, UI/UX application style.
+* Simple typographic logo with the letters GRB inside a web browser window frame, a shield enclosing a world map, solid colors, corporate tech style.
+* Abstract geometric design of a straight line piercing through curved HTTP redirect arrows, minimalist, monochrome vector graphic.
+* Icon of a location pin locked with a steel padlock, modern flat vector, cybersecurity style, professional blue and grey color palette.

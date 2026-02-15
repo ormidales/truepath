@@ -1,0 +1,21 @@
+{
+  "manifest_version": 2,
+  "name": "TruePath",
+  "version": "1.0.0",
+  "description": "Bloque les redirections de navigation qui changent le domaine racine initial.",
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "storage",
+    "tabs",
+    "<all_urls>"
+  ],
+  "browser_action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  }
+}
