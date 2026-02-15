@@ -1,4 +1,5 @@
 const initialHostByRequest = new Map();
+const MAX_TRACKED_REQUESTS = 1000;
 
 const getRootDomain = (hostname) => {
   if (!hostname) {
@@ -8,6 +9,13 @@ const getRootDomain = (hostname) => {
   const labels = hostname.toLowerCase().split(".").filter(Boolean);
   if (labels.length < 2) {
     return hostname.toLowerCase();
+  }
+
+  const secondLevelSuffixes = new Set(["ac", "co", "com", "edu", "gov", "net", "org"]);
+  const tld = labels[labels.length - 1];
+  const secondLevel = labels[labels.length - 2];
+  if (labels.length >= 3 && tld.length === 2 && secondLevelSuffixes.has(secondLevel)) {
+    return `${labels[labels.length - 3]}.${secondLevel}.${tld}`;
   }
 
   return `${labels[labels.length - 2]}.${labels[labels.length - 1]}`;
@@ -21,15 +29,28 @@ const readLocationHeader = (headers = []) => {
   return locationHeader && typeof locationHeader.value === "string" ? locationHeader.value : "";
 };
 
+const trackInitialHost = (requestId, host) => {
+  if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
+    const firstKey = initialHostByRequest.keys().next().value;
+    initialHostByRequest.delete(firstKey);
+  }
+
+  initialHostByRequest.set(requestId, host);
+};
+
 browser.webRequest.onBeforeRequest.addListener(
   (details) => {
     if (details.type !== "main_frame") {
       return;
     }
 
-    const currentHost = new URL(details.url).hostname;
-    if (!initialHostByRequest.has(details.requestId)) {
-      initialHostByRequest.set(details.requestId, currentHost);
+    try {
+      const currentHost = new URL(details.url).hostname;
+      if (!initialHostByRequest.has(details.requestId)) {
+        trackInitialHost(details.requestId, currentHost);
+      }
+    } catch (_error) {
+      initialHostByRequest.delete(details.requestId);
     }
   },
   { urls: ["<all_urls>"], types: ["main_frame"] }
@@ -46,16 +67,20 @@ browser.webRequest.onHeadersReceived.addListener(
       return {};
     }
 
-    const initialHost = initialHostByRequest.get(details.requestId) || new URL(details.url).hostname;
     const redirectLocation = readLocationHeader(details.responseHeaders);
     if (!redirectLocation) {
       return {};
     }
 
-    const redirectHost = new URL(redirectLocation, details.url).hostname;
-    if (getRootDomain(initialHost) !== getRootDomain(redirectHost)) {
+    try {
+      const initialHost = initialHostByRequest.get(details.requestId) || new URL(details.url).hostname;
+      const redirectHost = new URL(redirectLocation, details.url).hostname;
+      if (getRootDomain(initialHost) !== getRootDomain(redirectHost)) {
+        initialHostByRequest.delete(details.requestId);
+        return { cancel: true };
+      }
+    } catch (_error) {
       initialHostByRequest.delete(details.requestId);
-      return { cancel: true };
     }
 
     return {};
