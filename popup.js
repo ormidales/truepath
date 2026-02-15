@@ -44,7 +44,8 @@ const renderList = async () => {
     removeButton.type = "button";
     removeButton.textContent = "Supprimer";
     removeButton.addEventListener("click", async () => {
-      const nextDomains = domains.filter((entry) => entry !== domain);
+      const currentDomains = await getStoredDomains();
+      const nextDomains = currentDomains.filter((entry) => entry !== domain);
       await browser.storage.sync.set({ [STORAGE_KEY]: nextDomains });
       await renderList();
     });
@@ -80,7 +81,11 @@ const initPopup = async () => {
 
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
   if (tab && tab.url) {
-    currentDomain = getRootDomain(new URL(tab.url).hostname);
+    try {
+      currentDomain = getRootDomain(new URL(tab.url).hostname);
+    } catch (_error) {
+      currentDomain = "";
+    }
   }
 
   document.getElementById("add-domain").addEventListener("click", addCurrentDomain);
@@ -88,5 +93,8 @@ const initPopup = async () => {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  initPopup().catch(() => setStatus("Erreur lors du chargement."));
+  initPopup().catch((error) => {
+    console.error("Popup initialization failed", error);
+    setStatus("Erreur lors du chargement.");
+  });
 });

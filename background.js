@@ -44,13 +44,16 @@ const updateExceptionDomains = (domains = []) => {
   exceptionDomains.clear();
   domains
     .filter((domain) => typeof domain === "string" && domain.trim())
-    .forEach((domain) => exceptionDomains.add(domain.toLowerCase()));
+    .forEach((domain) => exceptionDomains.add(domain.trim().toLowerCase()));
 };
 
 browser.storage.sync
   .get(STORAGE_KEY)
   .then((stored) => updateExceptionDomains(stored[STORAGE_KEY]))
-  .catch(() => updateExceptionDomains());
+  .catch((error) => {
+    console.error("Failed to load exception domains", error);
+    updateExceptionDomains();
+  });
 
 browser.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === "sync" && changes[STORAGE_KEY]) {
