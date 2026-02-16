@@ -1,3 +1,8 @@
+/**
+ * Returns the registerable root domain used for domain comparison checks.
+ * @param {string} hostname Hostname to normalize and reduce to its root domain.
+ * @returns {string} Normalized root domain, or an empty string when hostname is falsy.
+ */
 const getRootDomain = (hostname) => {
   if (!hostname) {
     return "";

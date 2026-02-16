@@ -49,6 +49,11 @@ const readLocationHeader = (headers = []) => {
   return locationHeader && typeof locationHeader.value === "string" ? locationHeader.value : "";
 };
 
+/**
+ * Builds the spoofed Accept-Language value from a request hostname.
+ * @param {string} hostname Hostname used to infer a TLD-specific language profile.
+ * @returns {string} Spoofed Accept-Language header value, with default fallback for IPs/unknown TLDs.
+ */
 const buildAcceptLanguage = (hostname) => {
   if (IPV4_REGEX.test(hostname) || IPV6_REGEX.test(hostname)) {
     return DEFAULT_ACCEPT_LANGUAGE;
