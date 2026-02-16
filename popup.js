@@ -23,6 +23,7 @@ const renderList = async () => {
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.textContent = "Supprimer";
+    removeButton.setAttribute("aria-label", `Supprimer le domaine ${domain}`);
     removeButton.addEventListener("click", async () => {
       const currentDomains = await getStoredDomains();
       const nextDomains = currentDomains.filter((entry) => entry !== domain);
