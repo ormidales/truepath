@@ -1,5 +1,6 @@
 const STORAGE_KEY = "exceptionDomains";
 let currentDomain = "";
+let isAddingDomain = false;
 
 const getStoredDomains = async () => {
   const stored = await browser.storage.sync.get(STORAGE_KEY);
@@ -62,20 +63,37 @@ const renderList = async () => {
 };
 
 const addCurrentDomain = async () => {
-  if (!currentDomain) {
-    setStatus("Aucun domaine détecté.");
+  if (isAddingDomain) {
     return;
   }
 
-  const domains = await getStoredDomains();
-  if (domains.includes(currentDomain)) {
-    setStatus("Le domaine est déjà dans la liste blanche.");
-    return;
+  isAddingDomain = true;
+  const addButton = document.getElementById("add-domain");
+  if (addButton) {
+    addButton.disabled = true;
   }
 
-  await browser.storage.sync.set({ [STORAGE_KEY]: [...domains, currentDomain] });
-  setStatus("Domaine ajouté à la liste blanche.");
-  await renderList();
+  try {
+    if (!currentDomain) {
+      setStatus("Aucun domaine détecté.");
+      return;
+    }
+
+    const domains = await getStoredDomains();
+    if (domains.includes(currentDomain)) {
+      setStatus("Le domaine est déjà dans la liste blanche.");
+      return;
+    }
+
+    await browser.storage.sync.set({ [STORAGE_KEY]: [...domains, currentDomain] });
+    setStatus("Domaine ajouté à la liste blanche.");
+    await renderList();
+  } finally {
+    isAddingDomain = false;
+    if (addButton) {
+      addButton.disabled = false;
+    }
+  }
 };
 
 const clearDomains = async () => {
