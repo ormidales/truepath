@@ -5,12 +5,37 @@ const STORAGE_KEY = "exceptionDomains";
 const exceptionDomains = new Set();
 const DEFAULT_ACCEPT_LANGUAGE = "en-US,en;q=0.9";
 const ACCEPT_LANGUAGE_BY_TLD = new Map([
+  ["ar", "es-AR,es;q=0.9,en;q=0.7"],
+  ["at", "de-AT,de;q=0.9,en;q=0.7"],
+  ["au", "en-AU,en;q=0.9"],
+  ["be", "nl-BE,nl;q=0.9,fr;q=0.8,en;q=0.7"],
+  ["br", "pt-BR,pt;q=0.9,en;q=0.7"],
+  ["ca", "en-CA,en;q=0.9,fr;q=0.8"],
+  ["ch", "de-CH,de;q=0.9,fr;q=0.8,it;q=0.7,en;q=0.6"],
+  ["cn", "zh-CN,zh;q=0.9,en;q=0.7"],
+  ["cz", "cs-CZ,cs;q=0.9,en;q=0.7"],
+  ["dk", "da-DK,da;q=0.9,en;q=0.7"],
   ["de", "de-DE,de;q=0.9,en;q=0.7"],
   ["es", "es-ES,es;q=0.9,en;q=0.7"],
+  ["fi", "fi-FI,fi;q=0.9,en;q=0.7"],
   ["fr", "fr-FR,fr;q=0.9,en;q=0.7"],
+  ["ie", "en-IE,en;q=0.9"],
+  ["in", "en-IN,en;q=0.9,hi;q=0.8"],
   ["it", "it-IT,it;q=0.9,en;q=0.7"],
+  ["jp", "ja-JP,ja;q=0.9,en;q=0.7"],
+  ["kr", "ko-KR,ko;q=0.9,en;q=0.7"],
+  ["mx", "es-MX,es;q=0.9,en;q=0.7"],
   ["nl", "nl-NL,nl;q=0.9,en;q=0.7"],
-  ["pt", "pt-PT,pt;q=0.9,en;q=0.7"]
+  ["no", "nb-NO,nn-NO,nb;q=0.9,nn;q=0.8,en;q=0.7"],
+  ["nz", "en-NZ,en;q=0.9"],
+  ["pl", "pl-PL,pl;q=0.9,en;q=0.7"],
+  ["pt", "pt-PT,pt;q=0.9,en;q=0.7"],
+  ["ru", "ru-RU,ru;q=0.9,en;q=0.7"],
+  ["se", "sv-SE,sv;q=0.9,en;q=0.7"],
+  ["tr", "tr-TR,tr;q=0.9,en;q=0.7"],
+  ["tw", "zh-TW,zh;q=0.9,en;q=0.7"],
+  ["uk", "en-GB,en;q=0.9"],
+  ["za", "en-ZA,en;q=0.9"]
 ]);
 const IPV4_REGEX = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
 const IPV6_REGEX =
