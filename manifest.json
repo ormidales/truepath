@@ -18,5 +18,10 @@
       "utils.js",
       "background.js"
     ]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "truepath-extension@ormidales"
+    }
   }
 }
