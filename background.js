@@ -26,7 +26,7 @@ const ACCEPT_LANGUAGE_BY_TLD = new Map([
   ["kr", "ko-KR,ko;q=0.9,en;q=0.7"],
   ["mx", "es-MX,es;q=0.9,en;q=0.7"],
   ["nl", "nl-NL,nl;q=0.9,en;q=0.7"],
-  ["no", "nb-NO,nb;q=0.9,en;q=0.7"],
+  ["no", "nb-NO,nn-NO,nb;q=0.9,nn;q=0.8,en;q=0.7"],
   ["nz", "en-NZ,en;q=0.9"],
   ["pl", "pl-PL,pl;q=0.9,en;q=0.7"],
   ["pt", "pt-PT,pt;q=0.9,en;q=0.7"],
