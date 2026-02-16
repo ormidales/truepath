@@ -84,7 +84,7 @@ const addCurrentDomain = async () => {
 
     const normalizedCurrentDomain = currentDomain.toLowerCase();
     const domains = await getStoredDomains();
-    if (domains.includes(normalizedCurrentDomain)) {
+    if (domains.some((domain) => domain.toLowerCase() === normalizedCurrentDomain)) {
       setStatus("Le domaine est déjà dans la liste blanche.");
       return;
     }
