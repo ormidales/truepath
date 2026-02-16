@@ -138,7 +138,7 @@ browser.webRequest.onBeforeSendHeaders.addListener(
       const requestHeaders = details.requestHeaders;
       const spoofedLanguage = buildAcceptLanguage(host);
       let acceptLanguageHeaderIndex = -1;
-      for (let i = 0; i < requestHeaders.length; i += 1) {
+      for (let i = 0; i < requestHeaders.length; i++) {
         const header = requestHeaders[i];
         if (header && typeof header.name === "string" && header.name.toLowerCase() === "accept-language") {
           acceptLanguageHeaderIndex = i;
