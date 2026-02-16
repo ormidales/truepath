@@ -1,26 +1,6 @@
 const STORAGE_KEY = "exceptionDomains";
 let currentDomain = "";
 
-const getRootDomain = (hostname) => {
-  if (!hostname) {
-    return "";
-  }
-
-  const labels = hostname.toLowerCase().split(".").filter(Boolean);
-  if (labels.length < 2) {
-    return hostname.toLowerCase();
-  }
-
-  const secondLevelSuffixes = new Set(["ac", "co", "com", "edu", "gov", "net", "org"]);
-  const tld = labels[labels.length - 1];
-  const secondLevel = labels[labels.length - 2];
-  if (labels.length >= 3 && tld.length === 2 && secondLevelSuffixes.has(secondLevel)) {
-    return `${labels[labels.length - 3]}.${secondLevel}.${tld}`;
-  }
-
-  return `${labels[labels.length - 2]}.${labels[labels.length - 1]}`;
-};
-
 const getStoredDomains = async () => {
   const stored = await browser.storage.sync.get(STORAGE_KEY);
   return Array.isArray(stored[STORAGE_KEY]) ? stored[STORAGE_KEY] : [];
@@ -79,6 +59,12 @@ const initPopup = async () => {
     return;
   }
 
+  const addButton = document.getElementById("add-domain");
+  if (!addButton) {
+    setStatus("Bouton d'action introuvable.");
+    return;
+  }
+
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
   if (tab && tab.url) {
     try {
@@ -88,7 +74,15 @@ const initPopup = async () => {
     }
   }
 
-  document.getElementById("add-domain").addEventListener("click", addCurrentDomain);
+  if (currentDomain) {
+    addButton.textContent = `Ajouter ${currentDomain}`;
+    addButton.disabled = false;
+  } else {
+    addButton.textContent = "Domaine non détecté";
+    addButton.disabled = true;
+  }
+
+  addButton.addEventListener("click", addCurrentDomain);
   await renderList();
 };
 
