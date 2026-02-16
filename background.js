@@ -35,8 +35,6 @@ const buildAcceptLanguage = (hostname) => {
 };
 
 const trackInitialHost = (requestId, host) => {
-  cleanupStaleTrackedRequests();
-
   if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
     const firstKey = initialHostByRequest.keys().next().value;
     initialHostByRequest.delete(firstKey);
@@ -47,7 +45,7 @@ const trackInitialHost = (requestId, host) => {
 
 const cleanupStaleTrackedRequests = (now = Date.now()) => {
   for (const [requestId, trackedRequest] of initialHostByRequest.entries()) {
-    if (!trackedRequest || typeof trackedRequest !== "object" || now - trackedRequest.trackedAt > REQUEST_TRACK_TTL_MS) {
+    if (trackedRequest && typeof trackedRequest === "object" && now - trackedRequest.trackedAt > REQUEST_TRACK_TTL_MS) {
       initialHostByRequest.delete(requestId);
     }
   }
