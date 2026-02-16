@@ -7,8 +7,10 @@ const getStoredDomains = async () => {
   return Array.isArray(stored[STORAGE_KEY]) ? stored[STORAGE_KEY] : [];
 };
 
-const setStatus = (message) => {
-  document.getElementById("status").textContent = message;
+const setStatus = (message, isError = false) => {
+  const status = document.getElementById("status");
+  status.textContent = message;
+  status.style.color = isError ? "#b00020" : "";
 };
 
 const renderList = async () => {
@@ -85,7 +87,12 @@ const addCurrentDomain = async () => {
       return;
     }
 
-    await browser.storage.sync.set({ [STORAGE_KEY]: [...domains, currentDomain] });
+    try {
+      await browser.storage.sync.set({ [STORAGE_KEY]: [...domains, currentDomain] });
+    } catch (_error) {
+      setStatus("Impossible de sauvegarder : Quota atteint", true);
+      return;
+    }
     setStatus("Domaine ajouté à la liste blanche.");
     await renderList();
   } finally {
