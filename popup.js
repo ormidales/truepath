@@ -65,7 +65,12 @@ const initPopup = async () => {
     return;
   }
 
-  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+  let tab = null;
+  try {
+    [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+  } catch (_error) {
+    tab = null;
+  }
   if (tab && tab.url) {
     try {
       currentDomain = getRootDomain(new URL(tab.url).hostname);
