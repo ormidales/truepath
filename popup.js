@@ -103,7 +103,7 @@ const initPopup = async () => {
   const addButton = document.getElementById("add-domain");
   const clearButton = document.getElementById("clear-domains");
   if (!addButton || !clearButton) {
-    setStatus("Bouton d'action introuvable.");
+    setStatus("Boutons d'action introuvables.");
     return;
   }
 
