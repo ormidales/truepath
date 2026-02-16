@@ -78,6 +78,22 @@ const addCurrentDomain = async () => {
   await renderList();
 };
 
+const clearDomains = async () => {
+  const domains = await getStoredDomains();
+  if (domains.length === 0) {
+    setStatus("La liste blanche est déjà vide.");
+    return;
+  }
+
+  if (!window.confirm("Voulez-vous vraiment vider la liste blanche ?")) {
+    return;
+  }
+
+  await browser.storage.sync.set({ [STORAGE_KEY]: [] });
+  setStatus("Liste blanche vidée.");
+  await renderList();
+};
+
 const initPopup = async () => {
   if (typeof browser === "undefined" || !browser.tabs || !browser.storage) {
     setStatus("API WebExtensions indisponible.");
@@ -85,7 +101,8 @@ const initPopup = async () => {
   }
 
   const addButton = document.getElementById("add-domain");
-  if (!addButton) {
+  const clearButton = document.getElementById("clear-domains");
+  if (!addButton || !clearButton) {
     setStatus("Bouton d'action introuvable.");
     return;
   }
@@ -113,6 +130,7 @@ const initPopup = async () => {
   }
 
   addButton.addEventListener("click", addCurrentDomain);
+  clearButton.addEventListener("click", clearDomains);
   await renderList();
 };
 
