@@ -59,6 +59,12 @@ const initPopup = async () => {
     return;
   }
 
+  const addButton = document.getElementById("add-domain");
+  if (!addButton) {
+    setStatus("Bouton d'action introuvable.");
+    return;
+  }
+
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
   if (tab && tab.url) {
     try {
@@ -68,7 +74,15 @@ const initPopup = async () => {
     }
   }
 
-  document.getElementById("add-domain").addEventListener("click", addCurrentDomain);
+  if (currentDomain) {
+    addButton.textContent = `Ajouter ${currentDomain}`;
+    addButton.disabled = false;
+  } else {
+    addButton.textContent = "Domaine non détecté";
+    addButton.disabled = true;
+  }
+
+  addButton.addEventListener("click", addCurrentDomain);
   await renderList();
 };
 
