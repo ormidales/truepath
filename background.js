@@ -135,14 +135,19 @@ browser.webRequest.onBeforeSendHeaders.addListener(
         return {};
       }
 
-      const requestHeaders = [...details.requestHeaders];
+      const requestHeaders = details.requestHeaders;
       const spoofedLanguage = buildAcceptLanguage(host);
-      const acceptLanguageHeader = requestHeaders.find(
-        (header) => header && typeof header.name === "string" && header.name.toLowerCase() === "accept-language"
-      );
+      let acceptLanguageHeaderIndex = -1;
+      for (let i = 0; i < requestHeaders.length; i += 1) {
+        const header = requestHeaders[i];
+        if (header && typeof header.name === "string" && header.name.toLowerCase() === "accept-language") {
+          acceptLanguageHeaderIndex = i;
+          break;
+        }
+      }
 
-      if (acceptLanguageHeader) {
-        acceptLanguageHeader.value = spoofedLanguage;
+      if (acceptLanguageHeaderIndex !== -1) {
+        requestHeaders[acceptLanguageHeaderIndex].value = spoofedLanguage;
       } else {
         requestHeaders.push({ name: "Accept-Language", value: spoofedLanguage });
       }
