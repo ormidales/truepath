@@ -12,6 +12,9 @@ const setStatus = (message) => {
 
 const renderList = async () => {
   const domains = await getStoredDomains();
+  const sortedDomains = [...domains].sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
   const list = document.getElementById("domain-list");
   list.textContent = "";
 
@@ -23,7 +26,7 @@ const renderList = async () => {
     return;
   }
 
-  domains.forEach((domain) => {
+  sortedDomains.forEach((domain) => {
     const item = document.createElement("li");
     const label = document.createElement("span");
     label.textContent = domain;
