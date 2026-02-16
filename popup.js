@@ -82,14 +82,15 @@ const addCurrentDomain = async () => {
       return;
     }
 
+    const normalizedCurrentDomain = currentDomain.toLowerCase();
     const domains = await getStoredDomains();
-    if (domains.includes(currentDomain)) {
+    if (domains.includes(normalizedCurrentDomain)) {
       setStatus("Le domaine est déjà dans la liste blanche.");
       return;
     }
 
     try {
-      await browser.storage.sync.set({ [STORAGE_KEY]: [...domains, currentDomain] });
+      await browser.storage.sync.set({ [STORAGE_KEY]: [...domains, normalizedCurrentDomain] });
     } catch (error) {
       const errorMessage = typeof error?.message === "string" ? error.message : "";
       const isQuotaError = /quota/i.test(errorMessage);
