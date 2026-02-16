@@ -1,4 +1,5 @@
 const STORAGE_KEY = "exceptionDomains";
+const ERROR_STATUS_COLOR = "#b00020";
 let currentDomain = "";
 let isAddingDomain = false;
 
@@ -7,8 +8,10 @@ const getStoredDomains = async () => {
   return Array.isArray(stored[STORAGE_KEY]) ? stored[STORAGE_KEY] : [];
 };
 
-const setStatus = (message) => {
-  document.getElementById("status").textContent = message;
+const setStatus = (message, isError = false) => {
+  const status = document.getElementById("status");
+  status.textContent = message;
+  status.style.color = isError ? ERROR_STATUS_COLOR : "";
 };
 
 const renderList = async () => {
@@ -85,7 +88,19 @@ const addCurrentDomain = async () => {
       return;
     }
 
-    await browser.storage.sync.set({ [STORAGE_KEY]: [...domains, currentDomain] });
+    try {
+      await browser.storage.sync.set({ [STORAGE_KEY]: [...domains, currentDomain] });
+    } catch (error) {
+      const errorMessage = typeof error?.message === "string" ? error.message : "";
+      const isQuotaError = /quota/i.test(errorMessage);
+      setStatus(
+        isQuotaError
+          ? "Impossible de sauvegarder : Quota atteint"
+          : "Impossible de sauvegarder : Erreur de stockage",
+        true
+      );
+      return;
+    }
     setStatus("Domaine ajouté à la liste blanche.");
     await renderList();
   } finally {
