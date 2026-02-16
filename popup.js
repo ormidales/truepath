@@ -33,10 +33,23 @@ const renderList = async () => {
     removeButton.textContent = "Supprimer";
     removeButton.setAttribute("aria-label", `Supprimer le domaine ${domain}`);
     removeButton.addEventListener("click", async () => {
+      const buttons = Array.from(list.querySelectorAll("li button"));
+      const buttonIndex = buttons.indexOf(removeButton);
+      const nextFocusButton = buttons[buttonIndex + 1] || buttons[buttonIndex - 1] || null;
+
+      item.remove();
+      if (list.children.length === 0) {
+        const emptyItem = document.createElement("li");
+        emptyItem.className = "empty-state";
+        emptyItem.textContent = "Aucun domaine en liste blanche";
+        list.appendChild(emptyItem);
+      } else if (nextFocusButton) {
+        nextFocusButton.focus();
+      }
+
       const currentDomains = await getStoredDomains();
       const nextDomains = currentDomains.filter((entry) => entry !== domain);
       await browser.storage.sync.set({ [STORAGE_KEY]: nextDomains });
-      await renderList();
     });
 
     item.appendChild(label);
