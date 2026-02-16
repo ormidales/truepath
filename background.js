@@ -11,6 +11,9 @@ const ACCEPT_LANGUAGE_BY_TLD = new Map([
   ["nl", "nl-NL,nl;q=0.9,en;q=0.7"],
   ["pt", "pt-PT,pt;q=0.9,en;q=0.7"]
 ]);
+const IPV4_REGEX = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+const IPV6_REGEX =
+  /^\[?(?:(?:[a-f0-9]{1,4}:){7}[a-f0-9]{1,4}|(?:[a-f0-9]{1,4}:){1,7}:|(?:[a-f0-9]{1,4}:){1,6}:[a-f0-9]{1,4}|(?:[a-f0-9]{1,4}:){1,5}(?::[a-f0-9]{1,4}){1,2}|(?:[a-f0-9]{1,4}:){1,4}(?::[a-f0-9]{1,4}){1,3}|(?:[a-f0-9]{1,4}:){1,3}(?::[a-f0-9]{1,4}){1,4}|(?:[a-f0-9]{1,4}:){1,2}(?::[a-f0-9]{1,4}){1,5}|[a-f0-9]{1,4}:(?:(?::[a-f0-9]{1,4}){1,6})|:(?:(?::[a-f0-9]{1,4}){1,7}|:))\]?$/i;
 
 const readLocationHeader = (headers = []) => {
   const locationHeader = headers.find(
@@ -21,6 +24,10 @@ const readLocationHeader = (headers = []) => {
 };
 
 const buildAcceptLanguage = (hostname) => {
+  if (IPV4_REGEX.test(hostname) || IPV6_REGEX.test(hostname)) {
+    return DEFAULT_ACCEPT_LANGUAGE;
+  }
+
   const labels = hostname.toLowerCase().split(".").filter(Boolean);
   const tld = labels[labels.length - 1] || "";
   return ACCEPT_LANGUAGE_BY_TLD.get(tld) || DEFAULT_ACCEPT_LANGUAGE;
