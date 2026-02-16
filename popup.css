@@ -25,3 +25,8 @@ li {
   gap: 8px;
   margin-bottom: 4px;
 }
+
+li.empty-state {
+  display: block;
+  color: #666;
+}
