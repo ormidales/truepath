@@ -1,5 +1,6 @@
 const initialHostByRequest = new Map();
 const MAX_TRACKED_REQUESTS = 1000;
+const REQUEST_TRACK_TTL_MS = 60 * 1000;
 const STORAGE_KEY = "exceptionDomains";
 const exceptionDomains = new Set();
 const DEFAULT_ACCEPT_LANGUAGE = "en-US,en;q=0.9";
@@ -34,13 +35,25 @@ const buildAcceptLanguage = (hostname) => {
 };
 
 const trackInitialHost = (requestId, host) => {
+  cleanupStaleTrackedRequests();
+
   if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
     const firstKey = initialHostByRequest.keys().next().value;
     initialHostByRequest.delete(firstKey);
   }
 
-  initialHostByRequest.set(requestId, host);
+  initialHostByRequest.set(requestId, { host, trackedAt: Date.now() });
 };
+
+const cleanupStaleTrackedRequests = (now = Date.now()) => {
+  for (const [requestId, trackedRequest] of initialHostByRequest.entries()) {
+    if (!trackedRequest || typeof trackedRequest !== "object" || now - trackedRequest.trackedAt > REQUEST_TRACK_TTL_MS) {
+      initialHostByRequest.delete(requestId);
+    }
+  }
+};
+
+setInterval(cleanupStaleTrackedRequests, REQUEST_TRACK_TTL_MS);
 
 const updateExceptionDomains = (domains = []) => {
   exceptionDomains.clear();
@@ -138,7 +151,10 @@ browser.webRequest.onHeadersReceived.addListener(
     }
 
     try {
-      const initialHost = initialHostByRequest.get(details.requestId) || new URL(details.url).hostname;
+      const trackedRequest = initialHostByRequest.get(details.requestId);
+      const initialHost =
+        (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
+        new URL(details.url).hostname;
       const redirectHost = new URL(redirectLocation, details.url).hostname;
       if (exceptionDomains.has(getRootDomain(initialHost))) {
         initialHostByRequest.delete(details.requestId);
