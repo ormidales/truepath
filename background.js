@@ -139,7 +139,7 @@ browser.webRequest.onHeadersReceived.addListener(
       return {};
     }
 
-    if (details.statusCode !== 301 && details.statusCode !== 302) {
+    if (![301, 302, 303, 307, 308].includes(details.statusCode)) {
       initialHostByRequest.delete(details.requestId);
       return {};
     }
