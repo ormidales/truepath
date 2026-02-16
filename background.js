@@ -21,6 +21,12 @@ const readLocationHeader = (headers = []) => {
 };
 
 const buildAcceptLanguage = (hostname) => {
+  const ipv4Regex = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+  const ipv6Regex = /^\[?[a-f0-9]*:[a-f0-9:]+\]?$/i;
+  if (ipv4Regex.test(hostname) || ipv6Regex.test(hostname)) {
+    return DEFAULT_ACCEPT_LANGUAGE;
+  }
+
   const labels = hostname.toLowerCase().split(".").filter(Boolean);
   const tld = labels[labels.length - 1] || "";
   return ACCEPT_LANGUAGE_BY_TLD.get(tld) || DEFAULT_ACCEPT_LANGUAGE;
