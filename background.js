@@ -59,7 +59,8 @@ browser.storage.sync
 
 browser.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === "sync" && changes[STORAGE_KEY]) {
-    updateExceptionDomains(changes[STORAGE_KEY].newValue);
+    const updatedDomains = changes[STORAGE_KEY].newValue;
+    updateExceptionDomains(Array.isArray(updatedDomains) ? updatedDomains : []);
   }
 });
 
