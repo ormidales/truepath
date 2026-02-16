@@ -15,6 +15,14 @@ const renderList = async () => {
   const list = document.getElementById("domain-list");
   list.textContent = "";
 
+  if (domains.length === 0) {
+    const emptyItem = document.createElement("li");
+    emptyItem.className = "empty-state";
+    emptyItem.textContent = "Aucun domaine en liste blanche";
+    list.appendChild(emptyItem);
+    return;
+  }
+
   domains.forEach((domain) => {
     const item = document.createElement("li");
     const label = document.createElement("span");
