@@ -197,7 +197,13 @@ browser.webRequest.onHeadersReceived.addListener(
         initialHostByRequest.delete(details.requestId);
         return { cancel: true };
       }
-    } catch (_error) {
+    } catch (error) {
+      console.warn(
+        "Failed to parse redirect URL in onHeadersReceived",
+        details.url,
+        redirectLocation,
+        error
+      );
       initialHostByRequest.delete(details.requestId);
     }
 
