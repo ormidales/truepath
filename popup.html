@@ -3,41 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <title>TruePath Exceptions</title>
-    <style>
-      body {
-        font-family: sans-serif;
-        margin: 12px;
-        min-width: 280px;
-      }
-
-      h1 {
-        font-size: 14px;
-        margin: 0 0 8px;
-      }
-
-      button {
-        width: 100%;
-        margin-bottom: 8px;
-      }
-
-      ul {
-        padding-left: 18px;
-        margin: 8px 0 0;
-      }
-
-      li {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        margin-bottom: 4px;
-      }
-    </style>
+    <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <h1>Liste blanche</h1>
     <button id="add-domain" type="button">Ajouter le domaine courant</button>
+    <button id="clear-domains" type="button">Vider la liste</button>
     <div id="status" aria-live="polite"></div>
-    <ul id="domain-list"></ul>
+    <ul id="domain-list"><li class="empty-state" role="status">Chargement...</li></ul>
     <script src="utils.js"></script>
     <script src="popup.js"></script>
   </body>

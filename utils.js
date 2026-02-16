@@ -1,3 +1,8 @@
+/**
+ * Returns the registerable root domain used for domain comparison checks.
+ * @param {string} hostname Hostname to normalize and reduce to its root domain.
+ * @returns {string} Normalized root domain, or an empty string when hostname is falsy.
+ */
 const getRootDomain = (hostname) => {
   if (!hostname) {
     return "";
@@ -8,7 +13,7 @@ const getRootDomain = (hostname) => {
     return hostname.toLowerCase();
   }
 
-  const secondLevelSuffixes = new Set(["ac", "co", "com", "edu", "gov", "net", "org"]);
+  const secondLevelSuffixes = new Set(["ac", "asso", "co", "com", "edu", "gov", "gouv", "net", "nom", "org"]);
   const tld = labels[labels.length - 1];
   const secondLevel = labels[labels.length - 2];
   if (labels.length >= 3 && tld.length === 2 && secondLevelSuffixes.has(secondLevel)) {
