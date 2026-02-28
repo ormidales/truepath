@@ -108,6 +108,10 @@ browser.webRequest.onBeforeRequest.addListener(
       return;
     }
 
+    if (!details.url.startsWith("http://") && !details.url.startsWith("https://")) {
+      return;
+    }
+
     try {
       const currentHost = new URL(details.url).hostname;
       if (!initialHostByRequest.has(details.requestId)) {
@@ -123,6 +127,10 @@ browser.webRequest.onBeforeRequest.addListener(
 browser.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
     if (details.type !== "main_frame") {
+      return {};
+    }
+
+    if (!details.url.startsWith("http://") && !details.url.startsWith("https://")) {
       return {};
     }
 
@@ -167,6 +175,10 @@ browser.webRequest.onBeforeSendHeaders.addListener(
 browser.webRequest.onHeadersReceived.addListener(
   (details) => {
     if (details.type !== "main_frame") {
+      return {};
+    }
+
+    if (!details.url.startsWith("http://") && !details.url.startsWith("https://")) {
       return {};
     }
 
