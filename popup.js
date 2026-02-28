@@ -5,7 +5,11 @@ let isAddingDomain = false;
 
 const getStoredDomains = async () => {
   const stored = await browser.storage.sync.get(STORAGE_KEY);
-  return Array.isArray(stored[STORAGE_KEY]) ? stored[STORAGE_KEY] : [];
+  return Array.isArray(stored[STORAGE_KEY])
+    ? stored[STORAGE_KEY]
+        .filter((domain) => typeof domain === "string")
+        .map((domain) => domain.trim().toLowerCase())
+    : [];
 };
 
 const setStatus = (message, isError = false) => {
