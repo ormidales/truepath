@@ -1,3 +1,7 @@
+const IPV4_REGEX = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+const IPV6_REGEX =
+  /^\[?(?:(?:[a-f0-9]{1,4}:){7}[a-f0-9]{1,4}|(?:[a-f0-9]{1,4}:){1,7}:|(?:[a-f0-9]{1,4}:){1,6}:[a-f0-9]{1,4}|(?:[a-f0-9]{1,4}:){1,5}(?::[a-f0-9]{1,4}){1,2}|(?:[a-f0-9]{1,4}:){1,4}(?::[a-f0-9]{1,4}){1,3}|(?:[a-f0-9]{1,4}:){1,3}(?::[a-f0-9]{1,4}){1,4}|(?:[a-f0-9]{1,4}:){1,2}(?::[a-f0-9]{1,4}){1,5}|[a-f0-9]{1,4}:(?:(?::[a-f0-9]{1,4}){1,6})|:(?:(?::[a-f0-9]{1,4}){1,7}|:))\]?$/i;
+
 /**
  * Returns the registerable root domain used for domain comparison checks.
  * @param {string} hostname Hostname to normalize and reduce to its root domain.
@@ -6,6 +10,10 @@
 const getRootDomain = (hostname) => {
   if (!hostname) {
     return "";
+  }
+
+  if (IPV4_REGEX.test(hostname) || IPV6_REGEX.test(hostname)) {
+    return hostname;
   }
 
   const labels = hostname.toLowerCase().split(".").filter(Boolean);

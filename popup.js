@@ -5,7 +5,11 @@ let isAddingDomain = false;
 
 const getStoredDomains = async () => {
   const stored = await browser.storage.sync.get(STORAGE_KEY);
-  return Array.isArray(stored[STORAGE_KEY]) ? stored[STORAGE_KEY] : [];
+  return Array.isArray(stored[STORAGE_KEY])
+    ? stored[STORAGE_KEY]
+        .filter((domain) => typeof domain === "string")
+        .map((domain) => domain.trim().toLowerCase())
+    : [];
 };
 
 const setStatus = (message, isError = false) => {
@@ -50,6 +54,7 @@ const renderList = async () => {
         emptyItem.className = "empty-state";
         emptyItem.textContent = "Aucun domaine en liste blanche";
         list.appendChild(emptyItem);
+        document.getElementById("add-domain").focus();
       } else if (nextFocusButton) {
         nextFocusButton.focus();
       }

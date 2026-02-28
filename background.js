@@ -37,9 +37,6 @@ const ACCEPT_LANGUAGE_BY_TLD = new Map([
   ["uk", "en-GB,en;q=0.9"],
   ["za", "en-ZA,en;q=0.9"]
 ]);
-const IPV4_REGEX = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
-const IPV6_REGEX =
-  /^\[?(?:(?:[a-f0-9]{1,4}:){7}[a-f0-9]{1,4}|(?:[a-f0-9]{1,4}:){1,7}:|(?:[a-f0-9]{1,4}:){1,6}:[a-f0-9]{1,4}|(?:[a-f0-9]{1,4}:){1,5}(?::[a-f0-9]{1,4}){1,2}|(?:[a-f0-9]{1,4}:){1,4}(?::[a-f0-9]{1,4}){1,3}|(?:[a-f0-9]{1,4}:){1,3}(?::[a-f0-9]{1,4}){1,4}|(?:[a-f0-9]{1,4}:){1,2}(?::[a-f0-9]{1,4}){1,5}|[a-f0-9]{1,4}:(?:(?::[a-f0-9]{1,4}){1,6})|:(?:(?::[a-f0-9]{1,4}){1,7}|:))\]?$/i;
 
 const readLocationHeader = (headers = []) => {
   const locationHeader = headers.find(
@@ -111,6 +108,10 @@ browser.webRequest.onBeforeRequest.addListener(
       return;
     }
 
+    if (!details.url.startsWith("http://") && !details.url.startsWith("https://")) {
+      return;
+    }
+
     try {
       const currentHost = new URL(details.url).hostname;
       if (!initialHostByRequest.has(details.requestId)) {
@@ -126,6 +127,10 @@ browser.webRequest.onBeforeRequest.addListener(
 browser.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
     if (details.type !== "main_frame") {
+      return {};
+    }
+
+    if (!details.url.startsWith("http://") && !details.url.startsWith("https://")) {
       return {};
     }
 
@@ -173,6 +178,10 @@ browser.webRequest.onHeadersReceived.addListener(
       return {};
     }
 
+    if (!details.url.startsWith("http://") && !details.url.startsWith("https://")) {
+      return {};
+    }
+
     if (![301, 302, 303, 307, 308].includes(details.statusCode)) {
       initialHostByRequest.delete(details.requestId);
       return {};
@@ -198,10 +207,17 @@ browser.webRequest.onHeadersReceived.addListener(
         return { cancel: true };
       }
     } catch (error) {
+      let safeRedirectLocation = redirectLocation;
+      try {
+        const parsedRedirect = new URL(redirectLocation, details.url);
+        safeRedirectLocation = parsedRedirect.origin + parsedRedirect.pathname;
+      } catch (_e) {
+        // URL is malformed; fall back to the raw value already assigned above
+      }
       console.warn(
         "Failed to parse redirect URL in onHeadersReceived",
         details.url,
-        redirectLocation,
+        safeRedirectLocation,
         error
       );
       initialHostByRequest.delete(details.requestId);
