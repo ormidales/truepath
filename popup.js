@@ -50,6 +50,7 @@ const renderList = async () => {
         emptyItem.className = "empty-state";
         emptyItem.textContent = "Aucun domaine en liste blanche";
         list.appendChild(emptyItem);
+        document.getElementById("add-domain").focus();
       } else if (nextFocusButton) {
         nextFocusButton.focus();
       }
