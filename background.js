@@ -195,10 +195,17 @@ browser.webRequest.onHeadersReceived.addListener(
         return { cancel: true };
       }
     } catch (error) {
+      let safeRedirectLocation = redirectLocation;
+      try {
+        const parsedRedirect = new URL(redirectLocation, details.url);
+        safeRedirectLocation = parsedRedirect.origin + parsedRedirect.pathname;
+      } catch (_e) {
+        // URL is malformed; fall back to the raw value already assigned above
+      }
       console.warn(
         "Failed to parse redirect URL in onHeadersReceived",
         details.url,
-        redirectLocation,
+        safeRedirectLocation,
         error
       );
       initialHostByRequest.delete(details.requestId);
