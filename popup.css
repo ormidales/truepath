@@ -26,6 +26,19 @@ li {
   margin-bottom: 4px;
 }
 
+li > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+li > button {
+  flex-shrink: 0;
+  width: auto;
+  margin: 0;
+}
+
 li.empty-state {
   display: block;
   color: #666;
