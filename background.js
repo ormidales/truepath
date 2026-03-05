@@ -258,7 +258,19 @@ browser.webRequest.onHeadersReceived.addListener(
         safeRedirectLocation,
         error
       );
+      const trackedRequest = initialHostByRequest.get(details.requestId);
       initialHostByRequest.delete(details.requestId);
+      try {
+        const initialHost =
+          (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
+          new URL(details.url).hostname;
+        if (!exceptionDomains.has(getRootDomain(initialHost))) {
+          return { cancel: true };
+        }
+      } catch (cancelError) {
+        console.warn("Failed to determine initial host during fail-closed redirect cancellation", details.url, cancelError);
+        return { cancel: true };
+      }
     }
 
     return {};
