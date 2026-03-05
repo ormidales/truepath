@@ -131,7 +131,23 @@ const clearDomains = async () => {
   await browser.storage.sync.set({ [STORAGE_KEY]: [] });
   setStatus("Liste blanche vidée.");
   await renderList();
-  document.getElementById("add-domain").focus();
+  const addButton = document.getElementById("add-domain");
+  if (addButton && !addButton.disabled) {
+    addButton.focus();
+  } else {
+    const clearButton = document.getElementById("clear-domains");
+    if (clearButton && !clearButton.disabled) {
+      clearButton.focus();
+    } else {
+      const statusRegion = document.getElementById("status");
+      if (statusRegion) {
+        if (!statusRegion.hasAttribute("tabindex")) {
+          statusRegion.setAttribute("tabindex", "-1");
+        }
+        statusRegion.focus();
+      }
+    }
+  }
 };
 
 const initPopup = async () => {
