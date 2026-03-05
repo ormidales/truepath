@@ -47,6 +47,38 @@ const readLocationHeader = (headers = []) => {
 };
 
 /**
+ * Returns true if the hostname is a local or non-routable address that should
+ * not have its Accept-Language header modified.
+ * Covers: localhost, .local TLD, loopback/private IPv4, loopback/link-local IPv6.
+ * @param {string} hostname Hostname to test.
+ * @returns {boolean}
+ */
+const isLocalHost = (hostname) => {
+  if (!hostname) return false;
+  const h = hostname.toLowerCase();
+
+  if (h === "localhost" || h.endsWith(".local")) return true;
+
+  if (IPV4_REGEX.test(h)) {
+    const parts = h.split(".").map(Number);
+    return (
+      parts[0] === 127 ||
+      parts[0] === 10 ||
+      (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+      (parts[0] === 192 && parts[1] === 168) ||
+      (parts[0] === 169 && parts[1] === 254)
+    );
+  }
+
+  if (IPV6_REGEX.test(h)) {
+    const bare = h.replace(/^\[|\]$/g, "").split("%")[0].toLowerCase();
+    return bare === "::1" || bare.startsWith("fe80:") || bare.startsWith("fc") || bare.startsWith("fd");
+  }
+
+  return false;
+};
+
+/**
  * Builds the spoofed Accept-Language value from a request hostname.
  * @param {string} hostname Hostname used to infer a TLD-specific language profile.
  * @returns {string} Spoofed Accept-Language header value, with default fallback for IPs/unknown TLDs.
@@ -138,6 +170,10 @@ browser.webRequest.onBeforeSendHeaders.addListener(
     try {
       host = new URL(details.url).hostname;
       if (exceptionDomains.has(getRootDomain(host))) {
+        return {};
+      }
+
+      if (isLocalHost(host)) {
         return {};
       }
 
