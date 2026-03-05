@@ -35,6 +35,8 @@ li > span {
 
 li > button {
   flex-shrink: 0;
+  width: auto;
+  margin: 0;
 }
 
 li.empty-state {

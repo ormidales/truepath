@@ -74,7 +74,21 @@ const isNonRoutableHost = (hostname) => {
 
   if (IPV6_REGEX.test(h)) {
     const bare = h.replace(/^\[|\]$/g, "").split("%")[0].toLowerCase();
-    return bare === "::1" || bare.startsWith("fe80:") || bare.startsWith("fc") || bare.startsWith("fd");
+    const firstHextet = bare.split(":")[0];
+
+    const isLoopback = bare === "::1";
+
+    let isLinkLocal = false;
+    if (firstHextet && firstHextet.startsWith("fe")) {
+      const hextetValue = parseInt(firstHextet, 16);
+      if (!Number.isNaN(hextetValue) && hextetValue >= 0xfe80 && hextetValue <= 0xfebf) {
+        isLinkLocal = true;
+      }
+    }
+
+    const isUla = bare.startsWith("fc") || bare.startsWith("fd");
+
+    return isLoopback || isLinkLocal || isUla;
   }
 
   return false;
