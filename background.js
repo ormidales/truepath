@@ -49,11 +49,12 @@ const readLocationHeader = (headers = []) => {
 /**
  * Returns true if the hostname is a local or non-routable address that should
  * not have its Accept-Language header modified.
- * Covers: localhost, .local TLD, loopback/private IPv4, loopback/link-local IPv6.
+ * Covers: localhost, .local TLD, unspecified/loopback/private/link-local IPv4,
+ * loopback/link-local/unique-local (ULA, fc00::/7) IPv6.
  * @param {string} hostname Hostname to test.
  * @returns {boolean}
  */
-const isLocalHost = (hostname) => {
+const isNonRoutableHost = (hostname) => {
   if (!hostname) return false;
   const h = hostname.toLowerCase();
 
@@ -62,6 +63,7 @@ const isLocalHost = (hostname) => {
   if (IPV4_REGEX.test(h)) {
     const parts = h.split(".").map(Number);
     return (
+      parts[0] === 0 ||
       parts[0] === 127 ||
       parts[0] === 10 ||
       (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
@@ -173,7 +175,7 @@ browser.webRequest.onBeforeSendHeaders.addListener(
         return {};
       }
 
-      if (isLocalHost(host)) {
+      if (isNonRoutableHost(host)) {
         return {};
       }
 
