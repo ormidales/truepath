@@ -131,6 +131,7 @@ const clearDomains = async () => {
   await browser.storage.sync.set({ [STORAGE_KEY]: [] });
   setStatus("Liste blanche vidée.");
   await renderList();
+  document.getElementById("add-domain").focus();
 };
 
 const initPopup = async () => {
