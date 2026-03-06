@@ -126,7 +126,10 @@ const cleanupStaleTrackedRequests = (now = Date.now()) => {
   }
 };
 
-setInterval(cleanupStaleTrackedRequests, REQUEST_TRACK_TTL_MS);
+if (globalThis.cleanupIntervalId) {
+  clearInterval(globalThis.cleanupIntervalId);
+}
+globalThis.cleanupIntervalId = setInterval(cleanupStaleTrackedRequests, REQUEST_TRACK_TTL_MS);
 
 const updateExceptionDomains = (domains = []) => {
   exceptionDomains.clear();
