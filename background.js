@@ -137,7 +137,10 @@ const updateExceptionDomains = (domains = []) => {
 
 browser.storage.sync
   .get(STORAGE_KEY)
-  .then((stored) => updateExceptionDomains(stored[STORAGE_KEY]))
+  .then((stored) => {
+    const data = stored[STORAGE_KEY];
+    updateExceptionDomains(Array.isArray(data) ? data : []);
+  })
   .catch((error) => {
     console.error("Failed to load exception domains", error);
     updateExceptionDomains();
