@@ -1,6 +1,7 @@
 const IPV4_REGEX = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
 const IPV6_REGEX =
   /^\[?(?:(?:[a-f0-9]{1,4}:){7}[a-f0-9]{1,4}|(?:[a-f0-9]{1,4}:){1,7}:|(?:[a-f0-9]{1,4}:){1,6}:[a-f0-9]{1,4}|(?:[a-f0-9]{1,4}:){1,5}(?::[a-f0-9]{1,4}){1,2}|(?:[a-f0-9]{1,4}:){1,4}(?::[a-f0-9]{1,4}){1,3}|(?:[a-f0-9]{1,4}:){1,3}(?::[a-f0-9]{1,4}){1,4}|(?:[a-f0-9]{1,4}:){1,2}(?::[a-f0-9]{1,4}){1,5}|[a-f0-9]{1,4}:(?:(?::[a-f0-9]{1,4}){1,6})|:(?:(?::[a-f0-9]{1,4}){1,7}|:))(?:%[\w.-]+)?\]?$/i;
+const SECOND_LEVEL_SUFFIXES = new Set(["ac", "asso", "co", "com", "edu", "gov", "gouv", "net", "nom", "org", "mil", "int", "sch"]);
 
 /**
  * Returns the registerable root domain used for domain comparison checks.
@@ -21,10 +22,9 @@ const getRootDomain = (hostname) => {
     return hostname.toLowerCase();
   }
 
-  const secondLevelSuffixes = new Set(["ac", "asso", "co", "com", "edu", "gov", "gouv", "net", "nom", "org", "mil", "int", "sch"]);
   const tld = labels[labels.length - 1];
   const secondLevel = labels[labels.length - 2];
-  if (labels.length >= 3 && tld.length === 2 && secondLevelSuffixes.has(secondLevel)) {
+  if (labels.length >= 3 && tld.length === 2 && SECOND_LEVEL_SUFFIXES.has(secondLevel)) {
     return `${labels[labels.length - 3]}.${secondLevel}.${tld}`;
   }
 
