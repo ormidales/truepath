@@ -21,7 +21,7 @@ const getRootDomain = (hostname) => {
     return hostname.toLowerCase();
   }
 
-  const secondLevelSuffixes = new Set(["ac", "asso", "co", "com", "edu", "gov", "gouv", "net", "nom", "org"]);
+  const secondLevelSuffixes = new Set(["ac", "asso", "co", "com", "edu", "gov", "gouv", "net", "nom", "org", "mil", "int", "sch"]);
   const tld = labels[labels.length - 1];
   const secondLevel = labels[labels.length - 2];
   if (labels.length >= 3 && tld.length === 2 && secondLevelSuffixes.has(secondLevel)) {
