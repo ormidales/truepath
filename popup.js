@@ -19,7 +19,15 @@ const setStatus = (message, isError = false) => {
 };
 
 const renderList = async () => {
-  const domains = await getStoredDomains();
+  let domains;
+  try {
+    domains = await getStoredDomains();
+  } catch (error) {
+    console.error("Failed to retrieve stored domains", error);
+    setStatus("Erreur lors de la récupération des domaines.", true);
+    document.getElementById("domain-list").textContent = "";
+    return;
+  }
   const sortedDomains = [...domains].sort((a, b) =>
     a.localeCompare(b, undefined, { sensitivity: "base" })
   );
@@ -113,6 +121,13 @@ const addCurrentDomain = async () => {
     isAddingDomain = false;
     if (addButton) {
       addButton.disabled = false;
+    }
+    const statusElement = document.getElementById("status");
+    if (statusElement) {
+      if (!statusElement.hasAttribute("tabindex")) {
+        statusElement.setAttribute("tabindex", "-1");
+      }
+      statusElement.focus();
     }
   }
 };

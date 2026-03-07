@@ -126,7 +126,12 @@ const cleanupStaleTrackedRequests = (now = Date.now()) => {
   }
 };
 
-setInterval(cleanupStaleTrackedRequests, REQUEST_TRACK_TTL_MS);
+const CLEANUP_INTERVAL_KEY = "__acceptLangExt_cleanupIntervalId";
+const existingCleanupIntervalId = globalThis[CLEANUP_INTERVAL_KEY];
+if (typeof existingCleanupIntervalId === "number" || typeof existingCleanupIntervalId === "object") {
+  clearInterval(existingCleanupIntervalId);
+}
+globalThis[CLEANUP_INTERVAL_KEY] = setInterval(cleanupStaleTrackedRequests, REQUEST_TRACK_TTL_MS);
 
 const updateExceptionDomains = (domains = []) => {
   exceptionDomains.clear();
@@ -137,7 +142,10 @@ const updateExceptionDomains = (domains = []) => {
 
 browser.storage.sync
   .get(STORAGE_KEY)
-  .then((stored) => updateExceptionDomains(stored[STORAGE_KEY]))
+  .then((stored) => {
+    const data = stored[STORAGE_KEY];
+    updateExceptionDomains(Array.isArray(data) ? data : []);
+  })
   .catch((error) => {
     console.error("Failed to load exception domains", error);
     updateExceptionDomains();
