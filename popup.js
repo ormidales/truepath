@@ -122,6 +122,13 @@ const addCurrentDomain = async () => {
     if (addButton) {
       addButton.disabled = false;
     }
+    const statusElement = document.getElementById("status");
+    if (statusElement) {
+      if (!statusElement.hasAttribute("tabindex")) {
+        statusElement.setAttribute("tabindex", "-1");
+      }
+      statusElement.focus();
+    }
   }
 };
 
