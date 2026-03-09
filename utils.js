@@ -11,9 +11,23 @@ const IPV6_REGEX =
 const SECOND_LEVEL_SUFFIXES = new Set(["ac", "asso", "co", "com", "edu", "gov", "gouv", "net", "nom", "org", "mil", "int", "sch"]);
 
 /**
- * Returns the registerable root domain used for domain comparison checks.
- * @param {string} hostname Hostname to normalize and reduce to its root domain.
- * @returns {string} Normalized root domain, or an empty string when hostname is falsy.
+ * Returns the registerable root domain for domain-change comparison.
+ *
+ * Special cases:
+ * - Returns "" for falsy input.
+ * - Returns the address as-is for IPv4/IPv6.
+ * - Returns the hostname lowercased for single-label hostnames (e.g. "localhost").
+ * - Lowercases non-IP hostnames for normalization before extracting the root domain.
+ * - Handles known second-level suffixes (e.g. "co", "gouv") for ccTLDs of length 2.
+ *
+ * @param {string} hostname - The full hostname to reduce (e.g. "www.amazon.co.uk").
+ * @returns {string} Root domain (e.g. "amazon.co.uk"), or "" if hostname is falsy.
+ *
+ * @example
+ * getRootDomain("shop.example.fr")   // → "example.fr"
+ * getRootDomain("www.amazon.co.uk")  // → "amazon.co.uk"
+ * getRootDomain("192.168.1.1")       // → "192.168.1.1"
+ * getRootDomain("")                  // → ""
  */
 const getRootDomain = (hostname) => {
   if (!hostname) {
