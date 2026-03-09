@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "TruePath"
+  },
+  "extDescription": {
+    "message": "Bloque les redirections de navigation qui changent le domaine racine initial."
+  }
+}
