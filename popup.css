@@ -30,6 +30,8 @@ li > span {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* min-width: 0 overrides the flex default (auto) to allow shrinking below content size,
+     which is required for text-overflow: ellipsis to work inside a flex container. */
   min-width: 0;
 }
 
