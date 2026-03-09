@@ -16,7 +16,8 @@ const SECOND_LEVEL_SUFFIXES = new Set(["ac", "asso", "co", "com", "edu", "gov", 
  * Special cases:
  * - Returns "" for falsy input.
  * - Returns the address as-is for IPv4/IPv6.
- * - Returns the hostname as-is for single-label hostnames (e.g. "localhost").
+ * - Returns the hostname lowercased for single-label hostnames (e.g. "localhost").
+ * - Lowercases non-IP hostnames for normalization before extracting the root domain.
  * - Handles known second-level suffixes (e.g. "co", "gouv") for ccTLDs of length 2.
  *
  * @param {string} hostname - The full hostname to reduce (e.g. "www.amazon.co.uk").
