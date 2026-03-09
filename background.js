@@ -50,6 +50,13 @@ const ACCEPT_LANGUAGE_BY_TLD = new Map([
   ["za", "en-ZA,en;q=0.9"]
 ]);
 
+/**
+ * Extracts the value of the HTTP `Location` response header from a header array.
+ * Comparison is case-insensitive to match RFC 7230 requirements.
+ *
+ * @param {browser.webRequest.HttpHeader[]} [headers=[]] - Array of response headers.
+ * @returns {string} The Location header value, or "" if absent or malformed.
+ */
 const readLocationHeader = (headers = []) => {
   const locationHeader = headers.find(
     (header) => header && typeof header.name === "string" && header.name.toLowerCase() === "location"
