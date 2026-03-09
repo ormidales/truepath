@@ -128,6 +128,17 @@ const buildAcceptLanguage = (hostname) => {
   return ACCEPT_LANGUAGE_BY_TLD.get(tld) || DEFAULT_ACCEPT_LANGUAGE;
 };
 
+/**
+ * Records the initial hostname for a given request ID to allow cross-redirect
+ * domain comparison in onHeadersReceived.
+ *
+ * Implements a simple insertion-order eviction: when the map reaches
+ * MAX_TRACKED_REQUESTS, the oldest entry (first inserted) is removed before
+ * adding the new one, bounding memory usage.
+ *
+ * @param {string} requestId The WebExtensions request identifier.
+ * @param {string} host      The hostname from the original request URL.
+ */
 const trackInitialHost = (requestId, host) => {
   if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
     const firstKey = initialHostByRequest.keys().next().value;
