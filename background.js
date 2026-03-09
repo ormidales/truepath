@@ -6,11 +6,13 @@ const exceptionDomains = new Set();
 const DEFAULT_ACCEPT_LANGUAGE = "en-US,en;q=0.9";
 /**
  * Maps country-code TLDs to their typical Accept-Language header value.
- * Used to spoof the browser language to match the requested domain's locale,
- * which prevents geo-redirect loops triggered by Accept-Language mismatch.
+ * Used to adjust the outgoing Accept-Language request header so it matches
+ * the requested domain's locale, which helps prevent geo-redirect loops
+ * triggered by Accept-Language mismatch.
  *
- * To add a new TLD: append ["tld", "lang-REGION,lang;q=0.9,en;q=0.7"].
- * Values follow RFC 4647 / HTTP Accept-Language syntax.
+ * To add a new TLD: add ["tld", "lang-REGION,lang;q=0.9,en;q=0.7"] in
+ * alphabetical order by the TLD key. Keys must be lowercase TLD labels
+ * (no leading dot). Values follow RFC 4647 / HTTP Accept-Language syntax.
  *
  * @type {Map<string, string>}
  */
