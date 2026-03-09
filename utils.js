@@ -11,6 +11,17 @@ const IPV6_REGEX =
 const SECOND_LEVEL_SUFFIXES = new Set(["ac", "asso", "co", "com", "edu", "gov", "gouv", "net", "nom", "org", "mil", "int", "sch"]);
 
 /**
+ * Strips surrounding brackets and any zone identifier from an IPv6 address string.
+ * Handles both raw form (e.g. `fe80::1%eth0`) and bracketed form (e.g. `[fe80::1%eth0]`).
+ * The URL constructor is intentionally not used here because the hostname may arrive
+ * without a scheme, making `new URL()` impractical without an artificial prefix.
+ *
+ * @param {string} host IPv6 address, optionally bracketed (e.g. `[::1]` or `fe80::1%eth0`).
+ * @returns {string} Bare lowercase IPv6 address without brackets or zone identifier (e.g. `::1`).
+ */
+const stripIPv6Brackets = (host) => host.replace(/^\[|\]$/g, "").split("%")[0].toLowerCase();
+
+/**
  * Returns the registerable root domain for domain-change comparison.
  *
  * Special cases:

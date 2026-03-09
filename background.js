@@ -92,7 +92,7 @@ const isNonRoutableHost = (hostname) => {
   }
 
   if (IPV6_REGEX.test(h)) {
-    const bare = h.replace(/^\[|\]$/g, "").split("%")[0].toLowerCase();
+    const bare = stripIPv6Brackets(h);
     const firstHextet = bare.split(":")[0];
 
     const isLoopback = bare === "::1";
