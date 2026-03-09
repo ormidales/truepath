@@ -4,6 +4,18 @@ const REQUEST_TRACK_TTL_MS = 60 * 1000;
 const STORAGE_KEY = "exceptionDomains";
 const exceptionDomains = new Set();
 const DEFAULT_ACCEPT_LANGUAGE = "en-US,en;q=0.9";
+/**
+ * Maps country-code TLDs to their typical Accept-Language header value.
+ * Used to adjust the outgoing Accept-Language request header so it matches
+ * the requested domain's locale, which helps prevent geo-redirect loops
+ * triggered by Accept-Language mismatch.
+ *
+ * To add a new TLD: add ["tld", "lang-REGION,lang;q=0.9,en;q=0.7"] in
+ * alphabetical order by the TLD key. Keys must be lowercase TLD labels
+ * (no leading dot). Values follow RFC 4647 / HTTP Accept-Language syntax.
+ *
+ * @type {Map<string, string>}
+ */
 const ACCEPT_LANGUAGE_BY_TLD = new Map([
   ["ar", "es-AR,es;q=0.9,en;q=0.7"],
   ["at", "de-AT,de;q=0.9,en;q=0.7"],
@@ -38,6 +50,13 @@ const ACCEPT_LANGUAGE_BY_TLD = new Map([
   ["za", "en-ZA,en;q=0.9"]
 ]);
 
+/**
+ * Extracts the value of the HTTP `Location` response header from a header array.
+ * Comparison is case-insensitive to match RFC 7230 requirements.
+ *
+ * @param {browser.webRequest.HttpHeader[]} [headers=[]] Array of response headers.
+ * @returns {string} The Location header value, or "" if absent or malformed.
+ */
 const readLocationHeader = (headers = []) => {
   const locationHeader = headers.find(
     (header) => header && typeof header.name === "string" && header.name.toLowerCase() === "location"
@@ -73,7 +92,7 @@ const isNonRoutableHost = (hostname) => {
   }
 
   if (IPV6_REGEX.test(h)) {
-    const bare = h.replace(/^\[|\]$/g, "").split("%")[0].toLowerCase();
+    const bare = stripIPv6Brackets(h);
     const firstHextet = bare.split(":")[0];
 
     const isLoopback = bare === "::1";
@@ -109,6 +128,17 @@ const buildAcceptLanguage = (hostname) => {
   return ACCEPT_LANGUAGE_BY_TLD.get(tld) || DEFAULT_ACCEPT_LANGUAGE;
 };
 
+/**
+ * Records the initial hostname for a given request ID to allow cross-redirect
+ * domain comparison in onHeadersReceived.
+ *
+ * Implements a simple insertion-order eviction: when the map reaches
+ * MAX_TRACKED_REQUESTS, the oldest entry (first inserted) is removed before
+ * adding the new one, bounding memory usage.
+ *
+ * @param {string} requestId The WebExtensions request identifier.
+ * @param {string} host      The hostname from the original request URL.
+ */
 const trackInitialHost = (requestId, host) => {
   if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
     const firstKey = initialHostByRequest.keys().next().value;
