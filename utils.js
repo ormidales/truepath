@@ -16,7 +16,7 @@ const SECOND_LEVEL_SUFFIXES = new Set(["ac", "asso", "co", "com", "edu", "gov", 
  * The URL constructor is intentionally not used here because the hostname may arrive
  * without a scheme, making `new URL()` impractical without an artificial prefix.
  *
- * @param {string} host IPv6 address, optionally bracketed (e.g. `[::1]` or `fe80::1%eth0`).
+ * @param {string} host - IPv6 address, optionally bracketed (e.g. `[::1]` or `fe80::1%eth0`).
  * @returns {string} Bare lowercase IPv6 address without brackets or zone identifier (e.g. `::1`).
  */
 const stripIPv6Brackets = (host) => host.replace(/^\[|\]$/g, "").split("%")[0].toLowerCase();
