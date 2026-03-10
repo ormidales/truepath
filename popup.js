@@ -1,5 +1,4 @@
 const STORAGE_KEY = "exceptionDomains";
-const ERROR_STATUS_COLOR = "#b00020";
 const CLEAR_CONFIRM_TIMEOUT_MS = 5000;
 let currentDomain = "";
 let isAddingDomain = false;
@@ -19,7 +18,7 @@ const getStoredDomains = async () => {
 const setStatus = (message, isError = false) => {
   const status = document.getElementById("status");
   status.textContent = message;
-  status.style.color = isError ? ERROR_STATUS_COLOR : "";
+  status.className = isError ? "status-error" : "status-success";
 };
 
 const renderList = async () => {
