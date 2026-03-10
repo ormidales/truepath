@@ -2,6 +2,7 @@ const STORAGE_KEY = "exceptionDomains";
 const ERROR_STATUS_COLOR = "#b00020";
 let currentDomain = "";
 let isAddingDomain = false;
+let isRemoving = false;
 
 const getStoredDomains = async () => {
   const stored = await browser.storage.sync.get(STORAGE_KEY);
@@ -52,24 +53,34 @@ const renderList = async () => {
     removeButton.textContent = "Supprimer";
     removeButton.setAttribute("aria-label", `Supprimer le domaine ${domain}`);
     removeButton.addEventListener("click", async () => {
+      if (isRemoving) return;
+      isRemoving = true;
       const buttons = Array.from(list.querySelectorAll("li button"));
       const buttonIndex = buttons.indexOf(removeButton);
-      const nextFocusButton = buttons[buttonIndex + 1] || buttons[buttonIndex - 1] || null;
+      buttons.forEach((b) => (b.disabled = true));
 
-      item.remove();
-      if (list.children.length === 0) {
-        const emptyItem = document.createElement("li");
-        emptyItem.className = "empty-state";
-        emptyItem.textContent = "Aucun domaine en liste blanche";
-        list.appendChild(emptyItem);
-        document.getElementById("add-domain").focus();
-      } else if (nextFocusButton) {
-        nextFocusButton.focus();
+      try {
+        item.remove();
+        if (list.children.length === 0) {
+          const emptyItem = document.createElement("li");
+          emptyItem.className = "empty-state";
+          emptyItem.textContent = "Aucun domaine en liste blanche";
+          list.appendChild(emptyItem);
+        }
+
+        const currentDomains = await getStoredDomains();
+        const nextDomains = currentDomains.filter((entry) => entry !== domain);
+        await browser.storage.sync.set({ [STORAGE_KEY]: nextDomains });
+      } finally {
+        isRemoving = false;
+        await renderList();
+        const newButtons = Array.from(list.querySelectorAll("li button"));
+        if (newButtons.length === 0) {
+          document.getElementById("add-domain").focus();
+        } else {
+          newButtons[Math.min(buttonIndex, newButtons.length - 1)].focus();
+        }
       }
-
-      const currentDomains = await getStoredDomains();
-      const nextDomains = currentDomains.filter((entry) => entry !== domain);
-      await browser.storage.sync.set({ [STORAGE_KEY]: nextDomains });
     });
 
     item.appendChild(label);
