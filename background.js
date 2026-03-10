@@ -223,7 +223,15 @@ browser.webRequest.onBeforeSendHeaders.addListener(
     let host = "";
     try {
       host = new URL(details.url).hostname;
-      if (exceptionDomains.has(getRootDomain(host))) {
+      const trackedRequest = initialHostByRequest.get(details.requestId);
+      const initialHost =
+        (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
+        host;
+
+      if (
+        exceptionDomains.has(getRootDomain(host)) ||
+        exceptionDomains.has(getRootDomain(initialHost))
+      ) {
         return {};
       }
 
