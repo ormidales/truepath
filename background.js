@@ -114,9 +114,19 @@ const isNonRoutableHost = (hostname) => {
 };
 
 /**
- * Builds the spoofed Accept-Language value from a request hostname.
- * @param {string} hostname Hostname used to infer a TLD-specific language profile.
- * @returns {string} Spoofed Accept-Language header value, with default fallback for IPs/unknown TLDs.
+ * Builds the spoofed Accept-Language header value for a given hostname.
+ * Extracts the TLD from the hostname and looks it up in ACCEPT_LANGUAGE_BY_TLD.
+ * Falls back to DEFAULT_ACCEPT_LANGUAGE for IP addresses (IPv4 and IPv6),
+ * single-label hostnames, and TLDs not present in the map (e.g. .io, .dev, .app).
+ *
+ * @param {string} hostname The request hostname (e.g. "www.example.fr").
+ * @returns {string} RFC 4647 Accept-Language value (e.g. "fr-FR,fr;q=0.9,en;q=0.7"),
+ *   or DEFAULT_ACCEPT_LANGUAGE when no TLD mapping is found.
+ *
+ * @example
+ * buildAcceptLanguage("shop.example.de") // → "de-DE,de;q=0.9,en;q=0.7"
+ * buildAcceptLanguage("app.example.io")  // → "en-US,en;q=0.9" (unknown TLD fallback)
+ * buildAcceptLanguage("192.168.1.1")     // → "en-US,en;q=0.9" (IPv4 fallback)
  */
 const buildAcceptLanguage = (hostname) => {
   if (IPV4_REGEX.test(hostname) || IPV6_REGEX.test(hostname)) {
@@ -223,7 +233,15 @@ browser.webRequest.onBeforeSendHeaders.addListener(
     let host = "";
     try {
       host = new URL(details.url).hostname;
-      if (exceptionDomains.has(getRootDomain(host))) {
+      const trackedRequest = initialHostByRequest.get(details.requestId);
+      const initialHost =
+        (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
+        host;
+
+      if (
+        exceptionDomains.has(getRootDomain(host)) ||
+        exceptionDomains.has(getRootDomain(initialHost))
+      ) {
         return {};
       }
 

@@ -1,7 +1,10 @@
 const STORAGE_KEY = "exceptionDomains";
-const ERROR_STATUS_COLOR = "#b00020";
+const CLEAR_CONFIRM_TIMEOUT_MS = 5000;
 let currentDomain = "";
 let isAddingDomain = false;
+let isRemoving = false;
+let isClearConfirming = false;
+let clearConfirmTimeoutId = null;
 
 const getStoredDomains = async () => {
   const stored = await browser.storage.sync.get(STORAGE_KEY);
@@ -15,7 +18,7 @@ const getStoredDomains = async () => {
 const setStatus = (message, isError = false) => {
   const status = document.getElementById("status");
   status.textContent = message;
-  status.style.color = isError ? ERROR_STATUS_COLOR : "";
+  status.className = isError ? "status-error" : "status-success";
 };
 
 const renderList = async () => {
@@ -52,24 +55,34 @@ const renderList = async () => {
     removeButton.textContent = "Supprimer";
     removeButton.setAttribute("aria-label", `Supprimer le domaine ${domain}`);
     removeButton.addEventListener("click", async () => {
+      if (isRemoving) return;
+      isRemoving = true;
       const buttons = Array.from(list.querySelectorAll("li button"));
       const buttonIndex = buttons.indexOf(removeButton);
-      const nextFocusButton = buttons[buttonIndex + 1] || buttons[buttonIndex - 1] || null;
+      buttons.forEach((b) => (b.disabled = true));
 
-      item.remove();
-      if (list.children.length === 0) {
-        const emptyItem = document.createElement("li");
-        emptyItem.className = "empty-state";
-        emptyItem.textContent = "Aucun domaine en liste blanche";
-        list.appendChild(emptyItem);
-        document.getElementById("add-domain").focus();
-      } else if (nextFocusButton) {
-        nextFocusButton.focus();
+      try {
+        item.remove();
+        if (list.children.length === 0) {
+          const emptyItem = document.createElement("li");
+          emptyItem.className = "empty-state";
+          emptyItem.textContent = "Aucun domaine en liste blanche";
+          list.appendChild(emptyItem);
+        }
+
+        const currentDomains = await getStoredDomains();
+        const nextDomains = currentDomains.filter((entry) => entry !== domain);
+        await browser.storage.sync.set({ [STORAGE_KEY]: nextDomains });
+      } finally {
+        isRemoving = false;
+        await renderList();
+        const newButtons = Array.from(list.querySelectorAll("li button"));
+        if (newButtons.length === 0) {
+          document.getElementById("add-domain").focus();
+        } else {
+          newButtons[Math.min(buttonIndex, newButtons.length - 1)].focus();
+        }
       }
-
-      const currentDomains = await getStoredDomains();
-      const nextDomains = currentDomains.filter((entry) => entry !== domain);
-      await browser.storage.sync.set({ [STORAGE_KEY]: nextDomains });
     });
 
     item.appendChild(label);
@@ -132,17 +145,48 @@ const addCurrentDomain = async () => {
   }
 };
 
+const resetClearConfirm = () => {
+  isClearConfirming = false;
+  if (clearConfirmTimeoutId !== null) {
+    clearTimeout(clearConfirmTimeoutId);
+    clearConfirmTimeoutId = null;
+  }
+  const clearButton = document.getElementById("clear-domains");
+  if (clearButton) {
+    clearButton.textContent = "Vider la liste";
+    delete clearButton.dataset.confirming;
+  }
+  const cancelButton = document.getElementById("clear-cancel");
+  if (cancelButton) {
+    cancelButton.hidden = true;
+  }
+};
+
 const clearDomains = async () => {
   const domains = await getStoredDomains();
   if (domains.length === 0) {
+    resetClearConfirm();
     setStatus("La liste blanche est déjà vide.");
     return;
   }
 
-  if (!window.confirm("Voulez-vous vraiment vider la liste blanche ?")) {
+  const clearButton = document.getElementById("clear-domains");
+
+  if (!isClearConfirming) {
+    isClearConfirming = true;
+    if (clearButton) {
+      clearButton.textContent = "Confirmer le vidage ?";
+      clearButton.dataset.confirming = "true";
+    }
+    const cancelButton = document.getElementById("clear-cancel");
+    if (cancelButton) {
+      cancelButton.hidden = false;
+    }
+    clearConfirmTimeoutId = setTimeout(resetClearConfirm, CLEAR_CONFIRM_TIMEOUT_MS);
     return;
   }
 
+  resetClearConfirm();
   await browser.storage.sync.set({ [STORAGE_KEY]: [] });
   setStatus("Liste blanche vidée.");
   await renderList();
@@ -150,9 +194,9 @@ const clearDomains = async () => {
   if (addButton && !addButton.disabled) {
     addButton.focus();
   } else {
-    const clearButton = document.getElementById("clear-domains");
-    if (clearButton && !clearButton.disabled) {
-      clearButton.focus();
+    const clearBtn = document.getElementById("clear-domains");
+    if (clearBtn && !clearBtn.disabled) {
+      clearBtn.focus();
     } else {
       const statusRegion = document.getElementById("status");
       if (statusRegion) {
@@ -202,6 +246,10 @@ const initPopup = async () => {
 
   addButton.addEventListener("click", addCurrentDomain);
   clearButton.addEventListener("click", clearDomains);
+  const cancelButton = document.getElementById("clear-cancel");
+  if (cancelButton) {
+    cancelButton.addEventListener("click", resetClearConfirm);
+  }
   await renderList();
 };
 

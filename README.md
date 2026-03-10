@@ -4,10 +4,28 @@ Une extension Firefox interceptant les requêtes HTTP de navigation pour bloquer
 
 ## Stack Technique
 
-* **API WebExtensions** : Utilisation de l'API `declarativeNetRequest` (ou `webRequest` avec blocage) pour l'interception performante des requêtes réseau au niveau du navigateur.
+* **API WebExtensions** : Utilisation de l'API `webRequest` avec `webRequestBlocking` (Manifest V2) pour l'interception synchrone et l'annulation des requêtes réseau au niveau du navigateur.
 * **JavaScript Vanilla (ES2022)** : Garantit une exécution rapide et légère du background worker sans surcharge liée à un framework externe.
 * **HTML5/CSS3** : Interface utilisateur de la popup d'extension minimale et réactive pour la gestion des règles.
 * **Vite** : Outil de build pour la compilation, la minification des assets et la gestion du rechargement à chaud durant le développement.
+
+## Compatibilité & Roadmap
+
+L'extension utilise actuellement **Manifest V2** avec `webRequestBlocking`, seule API permettant l'inspection et l'annulation synchrone des redirections HTTP basées sur les headers de réponse.
+
+| Navigateur | Support MV2          | Calendrier de fin de support |
+|------------|----------------------|------------------------------|
+| Firefox    | ✅ Maintenu à long terme | Indéfini (engagement Mozilla) |
+| Chrome     | ⚠️ Déprécié           | Retiré depuis Chrome 127 (juin 2024) pour les extensions non-entreprise |
+
+### Pourquoi pas Manifest V3 ?
+
+L'API `declarativeNetRequest` (MV3) est à l'étude comme piste de migration future, mais présente des limitations bloquantes pour ce cas d'usage :
+
+* **Accès limité aux headers de réponse** : `declarativeNetRequest` ne permet pas l'inspection dynamique des headers HTTP de réponse (ex. `Location`) en temps réel, contrairement à `webRequest`.
+* **Absence de blocage synchrone** : MV3 ne supporte pas le blocage synchrone des requêtes, rendant impossible l'annulation à la volée d'une redirection selon son contenu.
+
+La migration vers MV3 sera envisagée lorsque l'API `declarativeNetRequest` offrira un accès équivalent aux headers de réponse et des capacités de filtrage dynamique.
 
 ## Idées de logos
 
