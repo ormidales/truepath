@@ -163,16 +163,14 @@ const resetClearConfirm = () => {
 };
 
 const clearDomains = async () => {
-  const domains = await getStoredDomains();
-  if (domains.length === 0) {
-    resetClearConfirm();
-    setStatus(browser.i18n.getMessage("statusListAlreadyEmpty"));
-    return;
-  }
-
   const clearButton = document.getElementById("clear-domains");
 
   if (!isClearConfirming) {
+    const domains = await getStoredDomains();
+    if (domains.length === 0) {
+      setStatus(browser.i18n.getMessage("statusListAlreadyEmpty"));
+      return;
+    }
     isClearConfirming = true;
     if (clearButton) {
       clearButton.textContent = browser.i18n.getMessage("btnClearListConfirm");
