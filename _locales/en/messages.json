@@ -4,5 +4,81 @@
   },
   "extDescription": {
     "message": "Blocks navigation redirects that change the initial root domain."
+  },
+  "labelWhitelist": {
+    "message": "Whitelist"
+  },
+  "btnAddCurrentDomain": {
+    "message": "Add current domain"
+  },
+  "btnAddDomain": {
+    "message": "Add $DOMAIN$",
+    "placeholders": {
+      "domain": {
+        "content": "$1"
+      }
+    }
+  },
+  "btnDomainNotDetected": {
+    "message": "Domain not detected"
+  },
+  "btnClearList": {
+    "message": "Clear list"
+  },
+  "btnClearListConfirm": {
+    "message": "Confirm clear?"
+  },
+  "btnCancelClear": {
+    "message": "Cancel"
+  },
+  "btnRemoveDomain": {
+    "message": "Remove"
+  },
+  "ariaRemoveDomain": {
+    "message": "Remove domain $DOMAIN$",
+    "placeholders": {
+      "domain": {
+        "content": "$1"
+      }
+    }
+  },
+  "emptyState": {
+    "message": "No whitelisted domain"
+  },
+  "statusLoading": {
+    "message": "Loading..."
+  },
+  "statusFetchError": {
+    "message": "Error retrieving domains."
+  },
+  "statusNoDomain": {
+    "message": "No domain detected."
+  },
+  "statusAlreadyAdded": {
+    "message": "Domain is already whitelisted."
+  },
+  "statusQuotaError": {
+    "message": "Unable to save: Quota reached."
+  },
+  "statusStorageError": {
+    "message": "Unable to save: Storage error."
+  },
+  "statusAdded": {
+    "message": "Domain added to whitelist."
+  },
+  "statusListAlreadyEmpty": {
+    "message": "Whitelist is already empty."
+  },
+  "statusListCleared": {
+    "message": "Whitelist cleared."
+  },
+  "statusApiUnavailable": {
+    "message": "WebExtensions API unavailable."
+  },
+  "statusButtonsNotFound": {
+    "message": "Action buttons not found."
+  },
+  "statusLoadError": {
+    "message": "Error loading popup."
   }
 }

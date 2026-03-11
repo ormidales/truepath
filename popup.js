@@ -27,7 +27,7 @@ const renderList = async () => {
     domains = await getStoredDomains();
   } catch (error) {
     console.error("Failed to retrieve stored domains", error);
-    setStatus("Erreur lors de la récupération des domaines.", true);
+    setStatus(browser.i18n.getMessage("statusFetchError"), true);
     document.getElementById("domain-list").textContent = "";
     return;
   }
@@ -40,7 +40,7 @@ const renderList = async () => {
   if (domains.length === 0) {
     const emptyItem = document.createElement("li");
     emptyItem.className = "empty-state";
-    emptyItem.textContent = "Aucun domaine en liste blanche";
+    emptyItem.textContent = browser.i18n.getMessage("emptyState");
     list.appendChild(emptyItem);
     return;
   }
@@ -52,8 +52,8 @@ const renderList = async () => {
 
     const removeButton = document.createElement("button");
     removeButton.type = "button";
-    removeButton.textContent = "Supprimer";
-    removeButton.setAttribute("aria-label", `Supprimer le domaine ${domain}`);
+    removeButton.textContent = browser.i18n.getMessage("btnRemoveDomain");
+    removeButton.setAttribute("aria-label", browser.i18n.getMessage("ariaRemoveDomain", [domain]));
     removeButton.addEventListener("click", async () => {
       if (isRemoving) return;
       isRemoving = true;
@@ -66,7 +66,7 @@ const renderList = async () => {
         if (list.children.length === 0) {
           const emptyItem = document.createElement("li");
           emptyItem.className = "empty-state";
-          emptyItem.textContent = "Aucun domaine en liste blanche";
+          emptyItem.textContent = browser.i18n.getMessage("emptyState");
           list.appendChild(emptyItem);
         }
 
@@ -104,14 +104,14 @@ const addCurrentDomain = async () => {
 
   try {
     if (!currentDomain) {
-      setStatus("Aucun domaine détecté.");
+      setStatus(browser.i18n.getMessage("statusNoDomain"));
       return;
     }
 
     const normalizedCurrentDomain = currentDomain.toLowerCase();
     const domains = await getStoredDomains();
     if (domains.some((domain) => domain.toLowerCase() === normalizedCurrentDomain)) {
-      setStatus("Le domaine est déjà dans la liste blanche.");
+      setStatus(browser.i18n.getMessage("statusAlreadyAdded"));
       return;
     }
 
@@ -122,13 +122,13 @@ const addCurrentDomain = async () => {
       const isQuotaError = /quota/i.test(errorMessage);
       setStatus(
         isQuotaError
-          ? "Impossible de sauvegarder : Quota atteint"
-          : "Impossible de sauvegarder : Erreur de stockage",
+          ? browser.i18n.getMessage("statusQuotaError")
+          : browser.i18n.getMessage("statusStorageError"),
         true
       );
       return;
     }
-    setStatus("Domaine ajouté à la liste blanche.");
+    setStatus(browser.i18n.getMessage("statusAdded"));
     await renderList();
   } finally {
     isAddingDomain = false;
@@ -153,7 +153,7 @@ const resetClearConfirm = () => {
   }
   const clearButton = document.getElementById("clear-domains");
   if (clearButton) {
-    clearButton.textContent = "Vider la liste";
+    clearButton.textContent = browser.i18n.getMessage("btnClearList");
     delete clearButton.dataset.confirming;
   }
   const cancelButton = document.getElementById("clear-cancel");
@@ -166,7 +166,7 @@ const clearDomains = async () => {
   const domains = await getStoredDomains();
   if (domains.length === 0) {
     resetClearConfirm();
-    setStatus("La liste blanche est déjà vide.");
+    setStatus(browser.i18n.getMessage("statusListAlreadyEmpty"));
     return;
   }
 
@@ -175,7 +175,7 @@ const clearDomains = async () => {
   if (!isClearConfirming) {
     isClearConfirming = true;
     if (clearButton) {
-      clearButton.textContent = "Confirmer le vidage ?";
+      clearButton.textContent = browser.i18n.getMessage("btnClearListConfirm");
       clearButton.dataset.confirming = "true";
     }
     const cancelButton = document.getElementById("clear-cancel");
@@ -188,7 +188,7 @@ const clearDomains = async () => {
 
   resetClearConfirm();
   await browser.storage.sync.set({ [STORAGE_KEY]: [] });
-  setStatus("Liste blanche vidée.");
+  setStatus(browser.i18n.getMessage("statusListCleared"));
   await renderList();
   const addButton = document.getElementById("add-domain");
   if (addButton && !addButton.disabled) {
@@ -211,15 +211,21 @@ const clearDomains = async () => {
 
 const initPopup = async () => {
   if (typeof browser === "undefined" || !browser.tabs || !browser.storage) {
-    setStatus("API WebExtensions indisponible.");
+    setStatus(browser?.i18n?.getMessage("statusApiUnavailable") ?? "WebExtensions API unavailable.");
     return;
   }
 
   const addButton = document.getElementById("add-domain");
   const clearButton = document.getElementById("clear-domains");
+  const cancelButton = document.getElementById("clear-cancel");
   if (!addButton || !clearButton) {
-    setStatus("Boutons d'action introuvables.");
+    setStatus(browser.i18n.getMessage("statusButtonsNotFound"));
     return;
+  }
+
+  const loadingItem = document.querySelector("#domain-list li.empty-state");
+  if (loadingItem) {
+    loadingItem.textContent = browser.i18n.getMessage("statusLoading");
   }
 
   let tab = null;
@@ -236,26 +242,32 @@ const initPopup = async () => {
     }
   }
 
+  const heading = document.querySelector("h1");
+  if (heading) {
+    heading.textContent = browser.i18n.getMessage("labelWhitelist");
+  }
+  clearButton.textContent = browser.i18n.getMessage("btnClearList");
+  if (cancelButton) {
+    cancelButton.textContent = browser.i18n.getMessage("btnCancelClear");
+    cancelButton.addEventListener("click", resetClearConfirm);
+  }
+
   if (currentDomain) {
-    addButton.textContent = `Ajouter ${currentDomain}`;
+    addButton.textContent = browser.i18n.getMessage("btnAddDomain", [currentDomain]);
     addButton.disabled = false;
   } else {
-    addButton.textContent = "Domaine non détecté";
+    addButton.textContent = browser.i18n.getMessage("btnDomainNotDetected");
     addButton.disabled = true;
   }
 
   addButton.addEventListener("click", addCurrentDomain);
   clearButton.addEventListener("click", clearDomains);
-  const cancelButton = document.getElementById("clear-cancel");
-  if (cancelButton) {
-    cancelButton.addEventListener("click", resetClearConfirm);
-  }
   await renderList();
 };
 
 document.addEventListener("DOMContentLoaded", () => {
   initPopup().catch((error) => {
     console.error("Popup initialization failed", error);
-    setStatus("Erreur lors du chargement.");
+    setStatus(browser.i18n.getMessage("statusLoadError"));
   });
 });
