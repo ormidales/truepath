@@ -1,9 +1,32 @@
+/**
+ * Tracks the hostname of the first request for each active requestId.
+ * Cleared on request completion, error, or TTL expiry.
+ * @type {Map<string, {host: string, trackedAt: number}>}
+ */
 const initialHostByRequest = new Map();
+
+/** Maximum number of concurrent request IDs tracked before LRU eviction. */
 const MAX_TRACKED_REQUESTS = 1000;
-const REQUEST_TRACK_TTL_MS = 60 * 1000;
+
+/** Time-to-live for a tracked request entry, in milliseconds (60 s). */
+const REQUEST_TRACK_TTL_MS = 60 * 1_000;
+
+/** `browser.storage.sync` key under which exception domains are persisted. */
 const STORAGE_KEY = "exceptionDomains";
+
+/**
+ * In-memory set of root domains excluded from redirect blocking and header spoofing.
+ * Populated at startup and kept in sync via `storage.onChanged`.
+ * @type {Set<string>}
+ */
 const exceptionDomains = new Set();
+
+/**
+ * Fallback Accept-Language value used when no TLD-specific mapping is found.
+ * Follows RFC 4647 syntax.
+ */
 const DEFAULT_ACCEPT_LANGUAGE = "en-US,en;q=0.9";
+
 /**
  * Maps country-code TLDs to their typical Accept-Language header value.
  * Used to adjust the outgoing Accept-Language request header so it matches
