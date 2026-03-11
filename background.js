@@ -306,7 +306,8 @@ browser.webRequest.onHeadersReceived.addListener(
         (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
         new URL(details.url).hostname;
       const redirectHost = new URL(redirectLocation, details.url).hostname;
-      if (exceptionDomains.has(getRootDomain(initialHost))) {
+      if (exceptionDomains.has(getRootDomain(initialHost)) ||
+          exceptionDomains.has(getRootDomain(redirectHost))) {
         initialHostByRequest.delete(details.requestId);
         return {};
       }
