@@ -4,5 +4,81 @@
   },
   "extDescription": {
     "message": "Bloque les redirections de navigation qui changent le domaine racine initial."
+  },
+  "labelWhitelist": {
+    "message": "Liste blanche"
+  },
+  "btnAddCurrentDomain": {
+    "message": "Ajouter le domaine courant"
+  },
+  "btnAddDomain": {
+    "message": "Ajouter $DOMAIN$",
+    "placeholders": {
+      "domain": {
+        "content": "$1"
+      }
+    }
+  },
+  "btnDomainNotDetected": {
+    "message": "Domaine non détecté"
+  },
+  "btnClearList": {
+    "message": "Vider la liste"
+  },
+  "btnClearListConfirm": {
+    "message": "Confirmer le vidage ?"
+  },
+  "btnCancelClear": {
+    "message": "Annuler"
+  },
+  "btnRemoveDomain": {
+    "message": "Supprimer"
+  },
+  "ariaRemoveDomain": {
+    "message": "Supprimer le domaine $DOMAIN$",
+    "placeholders": {
+      "domain": {
+        "content": "$1"
+      }
+    }
+  },
+  "emptyState": {
+    "message": "Aucun domaine en liste blanche"
+  },
+  "statusLoading": {
+    "message": "Chargement..."
+  },
+  "statusFetchError": {
+    "message": "Erreur lors de la récupération des domaines."
+  },
+  "statusNoDomain": {
+    "message": "Aucun domaine détecté."
+  },
+  "statusAlreadyAdded": {
+    "message": "Le domaine est déjà dans la liste blanche."
+  },
+  "statusQuotaError": {
+    "message": "Impossible de sauvegarder : Quota atteint."
+  },
+  "statusStorageError": {
+    "message": "Impossible de sauvegarder : Erreur de stockage."
+  },
+  "statusAdded": {
+    "message": "Domaine ajouté à la liste blanche."
+  },
+  "statusListAlreadyEmpty": {
+    "message": "La liste blanche est déjà vide."
+  },
+  "statusListCleared": {
+    "message": "Liste blanche vidée."
+  },
+  "statusApiUnavailable": {
+    "message": "API WebExtensions indisponible."
+  },
+  "statusButtonsNotFound": {
+    "message": "Boutons d'action introuvables."
+  },
+  "statusLoadError": {
+    "message": "Erreur lors du chargement."
   }
 }
