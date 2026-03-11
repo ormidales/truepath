@@ -213,6 +213,8 @@ const initPopup = async () => {
     return;
   }
 
+  document.documentElement.lang = browser.i18n.getUILanguage();
+
   const addButton = document.getElementById("add-domain");
   const clearButton = document.getElementById("clear-domains");
   const cancelButton = document.getElementById("clear-cancel");
