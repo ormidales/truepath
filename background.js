@@ -1,9 +1,32 @@
+/**
+ * Tracks the hostname of the first request for each active requestId.
+ * Cleared on request completion, error, or TTL expiry.
+ * @type {Map<string, {host: string, trackedAt: number}>}
+ */
 const initialHostByRequest = new Map();
+
+/** Maximum number of concurrent request IDs tracked before LRU eviction. */
 const MAX_TRACKED_REQUESTS = 1000;
-const REQUEST_TRACK_TTL_MS = 60 * 1000;
+
+/** Time-to-live for a tracked request entry, in milliseconds (60 s). */
+const REQUEST_TRACK_TTL_MS = 60 * 1_000;
+
+/** `browser.storage.sync` key under which exception domains are persisted. */
 const STORAGE_KEY = "exceptionDomains";
+
+/**
+ * In-memory set of root domains excluded from redirect blocking and header spoofing.
+ * Populated at startup and kept in sync via `storage.onChanged`.
+ * @type {Set<string>}
+ */
 const exceptionDomains = new Set();
+
+/**
+ * Fallback Accept-Language value used when no TLD-specific mapping is found.
+ * Follows RFC 4647 syntax.
+ */
 const DEFAULT_ACCEPT_LANGUAGE = "en-US,en;q=0.9";
+
 /**
  * Maps country-code TLDs to their typical Accept-Language header value.
  * Used to adjust the outgoing Accept-Language request header so it matches
@@ -17,36 +40,53 @@ const DEFAULT_ACCEPT_LANGUAGE = "en-US,en;q=0.9";
  * @type {Map<string, string>}
  */
 const ACCEPT_LANGUAGE_BY_TLD = new Map([
+  ["ae", "ar-AE,ar;q=0.9,en;q=0.7"],
   ["ar", "es-AR,es;q=0.9,en;q=0.7"],
   ["at", "de-AT,de;q=0.9,en;q=0.7"],
   ["au", "en-AU,en;q=0.9"],
   ["be", "nl-BE,nl;q=0.9,fr;q=0.8,en;q=0.7"],
+  ["bg", "bg-BG,bg;q=0.9,en;q=0.7"],
   ["br", "pt-BR,pt;q=0.9,en;q=0.7"],
   ["ca", "en-CA,en;q=0.9,fr;q=0.8"],
   ["ch", "de-CH,de;q=0.9,fr;q=0.8,it;q=0.7,en;q=0.6"],
   ["cn", "zh-CN,zh;q=0.9,en;q=0.7"],
   ["cz", "cs-CZ,cs;q=0.9,en;q=0.7"],
-  ["dk", "da-DK,da;q=0.9,en;q=0.7"],
   ["de", "de-DE,de;q=0.9,en;q=0.7"],
+  ["dk", "da-DK,da;q=0.9,en;q=0.7"],
+  ["ee", "et-EE,et;q=0.9,en;q=0.7"],
   ["es", "es-ES,es;q=0.9,en;q=0.7"],
   ["fi", "fi-FI,fi;q=0.9,en;q=0.7"],
   ["fr", "fr-FR,fr;q=0.9,en;q=0.7"],
+  ["gr", "el-GR,el;q=0.9,en;q=0.7"],
+  ["hr", "hr-HR,hr;q=0.9,en;q=0.7"],
+  ["hu", "hu-HU,hu;q=0.9,en;q=0.7"],
+  ["id", "id-ID,id;q=0.9,en;q=0.7"],
   ["ie", "en-IE,en;q=0.9"],
+  ["il", "he-IL,he;q=0.9,en;q=0.7"],
   ["in", "en-IN,en;q=0.9,hi;q=0.8"],
   ["it", "it-IT,it;q=0.9,en;q=0.7"],
   ["jp", "ja-JP,ja;q=0.9,en;q=0.7"],
   ["kr", "ko-KR,ko;q=0.9,en;q=0.7"],
+  ["lt", "lt-LT,lt;q=0.9,en;q=0.7"],
+  ["lv", "lv-LV,lv;q=0.9,en;q=0.7"],
   ["mx", "es-MX,es;q=0.9,en;q=0.7"],
   ["nl", "nl-NL,nl;q=0.9,en;q=0.7"],
   ["no", "nb-NO,nn-NO,nb;q=0.9,nn;q=0.8,en;q=0.7"],
   ["nz", "en-NZ,en;q=0.9"],
   ["pl", "pl-PL,pl;q=0.9,en;q=0.7"],
   ["pt", "pt-PT,pt;q=0.9,en;q=0.7"],
+  ["ro", "ro-RO,ro;q=0.9,en;q=0.7"],
   ["ru", "ru-RU,ru;q=0.9,en;q=0.7"],
+  ["sa", "ar-SA,ar;q=0.9,en;q=0.7"],
   ["se", "sv-SE,sv;q=0.9,en;q=0.7"],
+  ["si", "sl-SI,sl;q=0.9,en;q=0.7"],
+  ["sk", "sk-SK,sk;q=0.9,en;q=0.7"],
+  ["th", "th-TH,th;q=0.9,en;q=0.7"],
   ["tr", "tr-TR,tr;q=0.9,en;q=0.7"],
   ["tw", "zh-TW,zh;q=0.9,en;q=0.7"],
+  ["ua", "uk-UA,uk;q=0.9,ru;q=0.8,en;q=0.7"],
   ["uk", "en-GB,en;q=0.9"],
+  ["vn", "vi-VN,vi;q=0.9,en;q=0.7"],
   ["za", "en-ZA,en;q=0.9"]
 ]);
 
@@ -233,15 +273,8 @@ browser.webRequest.onBeforeSendHeaders.addListener(
     let host = "";
     try {
       host = new URL(details.url).hostname;
-      const trackedRequest = initialHostByRequest.get(details.requestId);
-      const initialHost =
-        (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
-        host;
 
-      if (
-        exceptionDomains.has(getRootDomain(host)) ||
-        exceptionDomains.has(getRootDomain(initialHost))
-      ) {
+      if (exceptionDomains.has(getRootDomain(host))) {
         return {};
       }
 
@@ -306,7 +339,8 @@ browser.webRequest.onHeadersReceived.addListener(
         (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
         new URL(details.url).hostname;
       const redirectHost = new URL(redirectLocation, details.url).hostname;
-      if (exceptionDomains.has(getRootDomain(initialHost))) {
+      if (exceptionDomains.has(getRootDomain(initialHost)) ||
+          exceptionDomains.has(getRootDomain(redirectHost))) {
         initialHostByRequest.delete(details.requestId);
         return {};
       }
