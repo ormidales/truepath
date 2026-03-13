@@ -4,7 +4,7 @@ Une extension Firefox interceptant les requêtes HTTP de navigation pour bloquer
 
 ## Comportement Accept-Language
 
-L'extension peut ajuster l'en-tête `Accept-Language` des requêtes pour aider à prévenir les boucles de redirection géographiques. Cet ajustement est effectué **uniquement** lorsqu'une redirection a déjà été détectée pour la requête en cours (même identifiant de requête), c'est-à-dire lors du suivi d'une redirection vers un sous-domaine du même TLD.
+L'extension peut ajuster l'en-tête `Accept-Language` des requêtes pour aider à prévenir les boucles de redirection géographiques. Cet ajustement est effectué **uniquement** lorsqu'une redirection a déjà été détectée pour la requête en cours (même identifiant de requête), c'est-à-dire lors du suivi d'une redirection au sein du même domaine racine / même TLD (par exemple un passage http→https, une redirection sur le même host ou vers un sous-domaine).
 
 Les chargements de page initiaux (sans redirection préalable) utilisent la vraie valeur `Accept-Language` du navigateur, ce qui préserve la vie privée de l'utilisateur et évite de divulguer l'intention de navigation par TLD à chaque site visité.
 
