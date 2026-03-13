@@ -13,6 +13,17 @@ const initialHostByRequest = new Map();
  */
 const redirectedRequestIds = new Set();
 
+/**
+ * Removes all tracking state associated with a given request ID.
+ * Ensures `initialHostByRequest` and `redirectedRequestIds` stay in sync.
+ *
+ * @param {string} requestId
+ */
+function cleanupTrackedRequest(requestId) {
+  initialHostByRequest.delete(requestId);
+  redirectedRequestIds.delete(requestId);
+}
+
 /** Maximum number of concurrent request IDs tracked before LRU eviction. */
 const MAX_TRACKED_REQUESTS = 1000;
 
@@ -347,8 +358,7 @@ browser.webRequest.onHeadersReceived.addListener(
     }
 
     if (![301, 302, 303, 307, 308].includes(details.statusCode)) {
-      initialHostByRequest.delete(details.requestId);
-      redirectedRequestIds.delete(details.requestId);
+      cleanupTrackedRequest(details.requestId);
       return {};
     }
 
@@ -362,15 +372,13 @@ browser.webRequest.onHeadersReceived.addListener(
       parsedRedirect = new URL(redirectLocation, details.url);
     } catch (_error) {
       // Malformed redirect URL — cancel to be safe
-      initialHostByRequest.delete(details.requestId);
-      redirectedRequestIds.delete(details.requestId);
+      cleanupTrackedRequest(details.requestId);
       return { cancel: true };
     }
 
     // Reject non-HTTP(S) redirect targets unconditionally (data:, blob:, ftp:, etc.)
     if (parsedRedirect.protocol !== "http:" && parsedRedirect.protocol !== "https:") {
-      initialHostByRequest.delete(details.requestId);
-      redirectedRequestIds.delete(details.requestId);
+      cleanupTrackedRequest(details.requestId);
       return { cancel: true };
     }
 
@@ -383,13 +391,11 @@ browser.webRequest.onHeadersReceived.addListener(
         new URL(details.url).hostname;
       if (exceptionDomains.has(getRootDomain(initialHost)) ||
           exceptionDomains.has(getRootDomain(redirectHost))) {
-        initialHostByRequest.delete(details.requestId);
-        redirectedRequestIds.delete(details.requestId);
+        cleanupTrackedRequest(details.requestId);
         return {};
       }
       if (getRootDomain(initialHost) !== getRootDomain(redirectHost)) {
-        initialHostByRequest.delete(details.requestId);
-        redirectedRequestIds.delete(details.requestId);
+        cleanupTrackedRequest(details.requestId);
         return { cancel: true };
       }
     } catch (error) {
@@ -404,15 +410,13 @@ browser.webRequest.onHeadersReceived.addListener(
         const initialHost =
           (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
           new URL(details.url).hostname;
-        initialHostByRequest.delete(details.requestId);
-        redirectedRequestIds.delete(details.requestId);
+        cleanupTrackedRequest(details.requestId);
         if (!exceptionDomains.has(getRootDomain(initialHost))) {
           return { cancel: true };
         }
       } catch (cancelError) {
         console.warn("Failed to determine initial host during fail-closed redirect cancellation", details.url, cancelError);
-        initialHostByRequest.delete(details.requestId);
-        redirectedRequestIds.delete(details.requestId);
+        cleanupTrackedRequest(details.requestId);
         return { cancel: true };
       }
     }
