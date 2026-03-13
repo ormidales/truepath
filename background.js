@@ -366,7 +366,7 @@ browser.webRequest.onHeadersReceived.addListener(
       }
     } catch (error) {
       console.warn(
-        "Failed to parse redirect URL in onHeadersReceived",
+        "Failed to resolve initial host during redirect handling in onHeadersReceived",
         details.url,
         `${parsedRedirect.origin}${parsedRedirect.pathname}`,
         error
