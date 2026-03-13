@@ -241,13 +241,6 @@ const cleanupStaleTrackedRequests = (now = Date.now()) => {
   }
 };
 
-const CLEANUP_INTERVAL_KEY = "__acceptLangExt_cleanupIntervalId";
-const existingCleanupIntervalId = globalThis[CLEANUP_INTERVAL_KEY];
-if (typeof existingCleanupIntervalId === "number" || typeof existingCleanupIntervalId === "object") {
-  clearInterval(existingCleanupIntervalId);
-}
-globalThis[CLEANUP_INTERVAL_KEY] = setInterval(cleanupStaleTrackedRequests, REQUEST_TRACK_TTL_MS);
-
 const updateExceptionDomains = (domains = []) => {
   exceptionDomains.clear();
   domains
@@ -255,25 +248,34 @@ const updateExceptionDomains = (domains = []) => {
     .forEach((domain) => exceptionDomains.add(domain.trim().toLowerCase()));
 };
 
-browser.storage.sync
-  .get(STORAGE_KEY)
-  .then((stored) => {
-    const data = stored[STORAGE_KEY];
-    updateExceptionDomains(Array.isArray(data) ? data : []);
-  })
-  .catch((error) => {
-    console.error("Failed to load exception domains", error);
-    updateExceptionDomains();
+/* istanbul ignore next */
+if (typeof module === "undefined") {
+  const CLEANUP_INTERVAL_KEY = "__acceptLangExt_cleanupIntervalId";
+  const existingCleanupIntervalId = globalThis[CLEANUP_INTERVAL_KEY];
+  if (typeof existingCleanupIntervalId === "number" || typeof existingCleanupIntervalId === "object") {
+    clearInterval(existingCleanupIntervalId);
+  }
+  globalThis[CLEANUP_INTERVAL_KEY] = setInterval(cleanupStaleTrackedRequests, REQUEST_TRACK_TTL_MS);
+
+  browser.storage.sync
+    .get(STORAGE_KEY)
+    .then((stored) => {
+      const data = stored[STORAGE_KEY];
+      updateExceptionDomains(Array.isArray(data) ? data : []);
+    })
+    .catch((error) => {
+      console.error("Failed to load exception domains", error);
+      updateExceptionDomains();
+    });
+
+  browser.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "sync" && changes[STORAGE_KEY]) {
+      const updatedDomains = changes[STORAGE_KEY].newValue;
+      updateExceptionDomains(Array.isArray(updatedDomains) ? updatedDomains : []);
+    }
   });
 
-browser.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === "sync" && changes[STORAGE_KEY]) {
-    const updatedDomains = changes[STORAGE_KEY].newValue;
-    updateExceptionDomains(Array.isArray(updatedDomains) ? updatedDomains : []);
-  }
-});
-
-browser.webRequest.onBeforeRequest.addListener(
+  browser.webRequest.onBeforeRequest.addListener(
   (details) => {
     if (details.type !== "main_frame") {
       return;
@@ -299,9 +301,9 @@ browser.webRequest.onBeforeRequest.addListener(
     }
   },
   { urls: ["<all_urls>"], types: ["main_frame"] }
-);
+  );
 
-browser.webRequest.onBeforeSendHeaders.addListener(
+  browser.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
     if (details.type !== "main_frame") {
       return {};
@@ -355,9 +357,9 @@ browser.webRequest.onBeforeSendHeaders.addListener(
   },
   { urls: ["<all_urls>"], types: ["main_frame"] },
   ["blocking", "requestHeaders"]
-);
+  );
 
-browser.webRequest.onHeadersReceived.addListener(
+  browser.webRequest.onHeadersReceived.addListener(
   (details) => {
     if (details.type !== "main_frame") {
       return {};
@@ -437,25 +439,26 @@ browser.webRequest.onHeadersReceived.addListener(
   },
   { urls: ["<all_urls>"], types: ["main_frame"] },
   ["blocking", "responseHeaders"]
-);
+  );
 
-browser.webRequest.onCompleted.addListener(
-  (details) => {
-    initialHostByRequest.delete(details.requestId);
-    redirectedRequestIds.delete(details.requestId);
-  },
-  { urls: ["<all_urls>"], types: ["main_frame"] }
-);
+  browser.webRequest.onCompleted.addListener(
+    (details) => {
+      initialHostByRequest.delete(details.requestId);
+      redirectedRequestIds.delete(details.requestId);
+    },
+    { urls: ["<all_urls>"], types: ["main_frame"] }
+  );
 
-browser.webRequest.onErrorOccurred.addListener(
-  (details) => {
-    initialHostByRequest.delete(details.requestId);
-    redirectedRequestIds.delete(details.requestId);
-  },
-  { urls: ["<all_urls>"], types: ["main_frame"] }
-);
+  browser.webRequest.onErrorOccurred.addListener(
+    (details) => {
+      initialHostByRequest.delete(details.requestId);
+      redirectedRequestIds.delete(details.requestId);
+    },
+    { urls: ["<all_urls>"], types: ["main_frame"] }
+  );
+}
 
 /* istanbul ignore next */
-if (typeof module !== "undefined") {
+if (typeof module === "object" && module !== null) {
   module.exports = { isNonRoutableHost, buildAcceptLanguage };
 }
