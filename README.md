@@ -2,6 +2,10 @@
 
 Une extension Firefox interceptant les requêtes HTTP de navigation pour bloquer les redirections automatiques basées sur la géolocalisation ou les paramètres régionaux (codes HTTP 301, 302, 303, 307, 308 vers des TLD différents). Elle garantit l'accès au domaine de premier niveau (TLD) explicitement saisi par l'utilisateur en interrompant la chaîne de redirection et en forçant le chargement de l'URL initiale.
 
+## Domaines en exception (liste blanche)
+
+Les domaines ajoutés à la liste blanche via la popup de l'extension sont exclusivement exemptés du **blocage des redirections** : leurs redirections cross-TLD ne seront pas annulées. En revanche, la modification de l'en-tête `Accept-Language` s'applique toujours à ces domaines selon les mêmes règles que pour les autres domaines. Ces deux fonctionnalités sont indépendantes : ajouter un domaine à la liste blanche n'affecte pas la gestion de l'en-tête de langue.
+
 ## Comportement Accept-Language
 
 L'extension peut ajuster l'en-tête `Accept-Language` des requêtes pour aider à prévenir les boucles de redirection géographiques. Cet ajustement est effectué **uniquement** lorsqu'une redirection a déjà été détectée pour la requête en cours (même identifiant de requête), c'est-à-dire lors du suivi d'une redirection au sein du même domaine racine / même TLD (par exemple un passage http→https, une redirection sur le même host ou vers un sous-domaine).

@@ -34,7 +34,9 @@ const REQUEST_TRACK_TTL_MS = 60 * 1_000;
 const STORAGE_KEY = "exceptionDomains";
 
 /**
- * In-memory set of root domains excluded from redirect blocking and header spoofing.
+ * In-memory set of root domains excluded from redirect blocking.
+ * Domains in this set will not have their cross-TLD redirects cancelled.
+ * Accept-Language spoofing still applies to these domains.
  * Populated at startup and kept in sync via `storage.onChanged`.
  * @type {Set<string>}
  */
@@ -318,10 +320,6 @@ browser.webRequest.onBeforeSendHeaders.addListener(
     let host = "";
     try {
       host = new URL(details.url).hostname;
-
-      if (exceptionDomains.has(getRootDomain(host))) {
-        return {};
-      }
 
       if (isNonRoutableHost(host)) {
         return {};
