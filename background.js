@@ -201,18 +201,29 @@ const buildAcceptLanguage = (hostname) => {
  * Records the initial hostname for a given request ID to allow cross-redirect
  * domain comparison in onHeadersReceived.
  *
- * Implements a simple insertion-order eviction: when the map reaches
- * MAX_TRACKED_REQUESTS, the oldest entry (first inserted) is removed before
- * adding the new one, bounding memory usage.
+ * When the map reaches MAX_TRACKED_REQUESTS, eviction prefers the oldest
+ * TTL-expired entry so that live (in-flight) requests are not prematurely
+ * removed during burst traffic. Falls back to evicting the oldest-inserted
+ * entry only when no stale entry exists, bounding memory usage.
  *
  * @param {string} requestId The WebExtensions request identifier.
  * @param {string} host      The hostname from the original request URL.
  */
 const trackInitialHost = (requestId, host) => {
   if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
-    const firstKey = initialHostByRequest.keys().next().value;
-    initialHostByRequest.delete(firstKey);
-    redirectedRequestIds.delete(firstKey);
+    const now = Date.now();
+    let evictKey = null;
+    for (const [key, entry] of initialHostByRequest) {
+      if (now - entry.trackedAt > REQUEST_TRACK_TTL_MS) {
+        evictKey = key;
+        break;
+      }
+    }
+    if (evictKey === null) {
+      evictKey = initialHostByRequest.keys().next().value;
+    }
+    initialHostByRequest.delete(evictKey);
+    redirectedRequestIds.delete(evictKey);
   }
 
   initialHostByRequest.set(requestId, { host, trackedAt: Date.now() });
