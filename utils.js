@@ -10,6 +10,14 @@ const IPV6_REGEX =
   /^\[?(?:(?:[a-f0-9]{1,4}:){7}[a-f0-9]{1,4}|(?:[a-f0-9]{1,4}:){1,7}:|(?:[a-f0-9]{1,4}:){1,6}:[a-f0-9]{1,4}|(?:[a-f0-9]{1,4}:){1,5}(?::[a-f0-9]{1,4}){1,2}|(?:[a-f0-9]{1,4}:){1,4}(?::[a-f0-9]{1,4}){1,3}|(?:[a-f0-9]{1,4}:){1,3}(?::[a-f0-9]{1,4}){1,4}|(?:[a-f0-9]{1,4}:){1,2}(?::[a-f0-9]{1,4}){1,5}|[a-f0-9]{1,4}:(?:(?::[a-f0-9]{1,4}){1,6})|:(?:(?::[a-f0-9]{1,4}){1,7}|:))(?:%[\w.-]+)?\]?$/i;
 
 /**
+ * Matches a single DNS label that conforms to the LDH (Letters, Digits, Hyphens) rule
+ * from RFC 5891. Labels must begin and end with a letter or digit, contain only
+ * `[a-z0-9-]`, and be at most 63 characters long. Punycode labels (`xn--...`) satisfy
+ * this rule and are therefore accepted.
+ */
+const LDH_LABEL_REGEX = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
+
+/**
  * Known two-part public suffixes (second-level + ccTLD) for common country-code TLDs.
  * Used by {@link getRootDomain} to correctly extract the registerable root domain
  * for hostnames whose effective TLD spans two labels (e.g. `co.uk`, `com.br`).
@@ -115,6 +123,10 @@ const stripIPv6Brackets = (host) => host.replace(/^\[|\]$/g, "").split("%")[0].t
  * - Returns `""` for falsy input.
  * - Returns the address as-is for IPv4 (e.g. `"192.168.1.1"`) and IPv6 (e.g. `"[::1]"`).
  * - Returns the hostname lowercased for single-label hostnames (e.g. `"localhost"`, `"com"`).
+ * - Validates each label against the LDH (Letters, Digits, Hyphens) rule from RFC 5891.
+ *   Hostnames containing labels with non-LDH characters (e.g. Unicode homoglyphs such as
+ *   `аmazon.co.uk` with a Cyrillic "а", or labels that exceed 63 characters) are rejected
+ *   and `""` is returned, preventing homograph-based bypass attacks.
  * - Filters out empty labels produced by consecutive dots (e.g. `"example..com"` → labels
  *   `["example", "com"]`), so the result is equivalent to the de-duplicated form.
  * - Lowercases non-IP hostnames for normalization before extracting the root domain.
@@ -127,7 +139,8 @@ const stripIPv6Brackets = (host) => host.replace(/^\[|\]$/g, "").split("%")[0].t
  * @returns {string} The registerable root domain (e.g. `"amazon.co.uk"`),
  *   the lowercased single-label hostname (e.g. `"localhost"`, `"com"`),
  *   the IP address unchanged (e.g. `"192.168.1.1"`, `"[::1]"`),
- *   or `""` if `hostname` is falsy.
+ *   `""` if `hostname` is falsy, or `""` if any label fails LDH validation
+ *   (e.g. contains Unicode homoglyphs or exceeds 63 characters).
  *
  * @example
  * getRootDomain("shop.example.fr")       // → "example.fr"
@@ -140,6 +153,8 @@ const stripIPv6Brackets = (host) => host.replace(/^\[|\]$/g, "").split("%")[0].t
  * getRootDomain("192.168.1.1")           // → "192.168.1.1" (IPv4, returned as-is)
  * getRootDomain("[::1]")                 // → "[::1]"      (IPv6, returned as-is)
  * getRootDomain("")                      // → ""
+ * getRootDomain("аmazon.co.uk")          // → ""  (Cyrillic homoglyph — non-LDH, rejected)
+ * getRootDomain("xn--e1afmapc.com")      // → "xn--e1afmapc.com" (Punycode — LDH-compliant)
  */
 const getRootDomain = (hostname) => {
   if (!hostname) {
@@ -151,8 +166,16 @@ const getRootDomain = (hostname) => {
   }
 
   const labels = hostname.toLowerCase().split(".").filter(Boolean);
+  if (labels.length === 0) {
+    return "";
+  }
+
+  if (labels.some((label) => !LDH_LABEL_REGEX.test(label))) {
+    return "";
+  }
+
   if (labels.length < 2) {
-    return hostname.toLowerCase();
+    return labels[0];
   }
 
   const candidate2 = labels.slice(-2).join(".");
