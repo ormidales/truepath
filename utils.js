@@ -1,3 +1,6 @@
+/** Storage key used to persist exception domains in browser.storage.sync. */
+const STORAGE_KEY = "exceptionDomains";
+
 /** Matches a valid IPv4 address (e.g. "192.168.1.1"). */
 const IPV4_REGEX = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
 
