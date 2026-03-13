@@ -191,3 +191,9 @@ const getRootDomain = (hostname) => {
 
   return candidate2;
 };
+
+
+/* istanbul ignore next */
+if (typeof module !== "undefined") {
+  module.exports = { IPV4_REGEX, IPV6_REGEX, stripIPv6Brackets, getRootDomain };
+}

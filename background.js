@@ -130,7 +130,7 @@ const readLocationHeader = (headers = []) => {
  * Returns true if the hostname is a local or non-routable address that should
  * not have its Accept-Language header modified.
  * Covers: localhost, .local TLD, unspecified/loopback/private/link-local IPv4,
- * loopback/link-local/unique-local (ULA, fc00::/7) IPv6.
+ * unspecified (::)/loopback/link-local/unique-local (ULA, fc00::/7) IPv6.
  * @param {string} hostname Hostname to test.
  * @returns {boolean}
  */
@@ -156,6 +156,7 @@ const isNonRoutableHost = (hostname) => {
     const bare = stripIPv6Brackets(h);
     const firstHextet = bare.split(":")[0];
 
+    const isUnspecified = bare === "::";
     const isLoopback = bare === "::1";
 
     let isLinkLocal = false;
@@ -168,7 +169,7 @@ const isNonRoutableHost = (hostname) => {
 
     const isUla = bare.startsWith("fc") || bare.startsWith("fd");
 
-    return isLoopback || isLinkLocal || isUla;
+    return isUnspecified || isLoopback || isLinkLocal || isUla;
   }
 
   return false;
@@ -453,3 +454,8 @@ browser.webRequest.onErrorOccurred.addListener(
   },
   { urls: ["<all_urls>"], types: ["main_frame"] }
 );
+
+/* istanbul ignore next */
+if (typeof module !== "undefined") {
+  module.exports = { isNonRoutableHost, buildAcceptLanguage };
+}
