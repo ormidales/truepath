@@ -1,4 +1,3 @@
-const STORAGE_KEY = "exceptionDomains";
 const CLEAR_CONFIRM_TIMEOUT_MS = 5000;
 let currentDomain = "";
 let isAddingDomain = false;

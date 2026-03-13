@@ -5,17 +5,35 @@
  */
 const initialHostByRequest = new Map();
 
+/**
+ * Tracks request IDs for which at least one redirect has been observed.
+ * Only requests in this set will have their Accept-Language header spoofed.
+ * Cleared on request completion, error, or TTL eviction alongside initialHostByRequest.
+ * @type {Set<string>}
+ */
+const redirectedRequestIds = new Set();
+
+/**
+ * Removes all tracking state associated with a given request ID.
+ * Ensures `initialHostByRequest` and `redirectedRequestIds` stay in sync.
+ *
+ * @param {string} requestId
+ */
+function cleanupTrackedRequest(requestId) {
+  initialHostByRequest.delete(requestId);
+  redirectedRequestIds.delete(requestId);
+}
+
 /** Maximum number of concurrent request IDs tracked before LRU eviction. */
 const MAX_TRACKED_REQUESTS = 1000;
 
 /** Time-to-live for a tracked request entry, in milliseconds (60 s). */
 const REQUEST_TRACK_TTL_MS = 60 * 1_000;
 
-/** `browser.storage.sync` key under which exception domains are persisted. */
-const STORAGE_KEY = "exceptionDomains";
-
 /**
- * In-memory set of root domains excluded from redirect blocking and header spoofing.
+ * In-memory set of root domains excluded from redirect blocking.
+ * Domains in this set will not have their cross-TLD redirects cancelled.
+ * Accept-Language spoofing still applies to these domains.
  * Populated at startup and kept in sync via `storage.onChanged`.
  * @type {Set<string>}
  */
@@ -109,7 +127,7 @@ const readLocationHeader = (headers = []) => {
  * Returns true if the hostname is a local or non-routable address that should
  * not have its Accept-Language header modified.
  * Covers: localhost, .local TLD, unspecified/loopback/private/link-local IPv4,
- * loopback/link-local/unique-local (ULA, fc00::/7) IPv6.
+ * unspecified (::)/loopback/link-local/unique-local (ULA, fc00::/7) IPv6.
  * @param {string} hostname Hostname to test.
  * @returns {boolean}
  */
@@ -135,6 +153,7 @@ const isNonRoutableHost = (hostname) => {
     const bare = stripIPv6Brackets(h);
     const firstHextet = bare.split(":")[0];
 
+    const isUnspecified = bare === "::";
     const isLoopback = bare === "::1";
 
     let isLinkLocal = false;
@@ -147,7 +166,7 @@ const isNonRoutableHost = (hostname) => {
 
     const isUla = bare.startsWith("fc") || bare.startsWith("fd");
 
-    return isLoopback || isLinkLocal || isUla;
+    return isUnspecified || isLoopback || isLinkLocal || isUla;
   }
 
   return false;
@@ -182,17 +201,29 @@ const buildAcceptLanguage = (hostname) => {
  * Records the initial hostname for a given request ID to allow cross-redirect
  * domain comparison in onHeadersReceived.
  *
- * Implements a simple insertion-order eviction: when the map reaches
- * MAX_TRACKED_REQUESTS, the oldest entry (first inserted) is removed before
- * adding the new one, bounding memory usage.
+ * When the map reaches MAX_TRACKED_REQUESTS, eviction prefers the oldest
+ * TTL-expired entry so that live (in-flight) requests are not prematurely
+ * removed during burst traffic. Falls back to evicting the oldest-inserted
+ * entry only when no stale entry exists, bounding memory usage.
  *
  * @param {string} requestId The WebExtensions request identifier.
  * @param {string} host      The hostname from the original request URL.
  */
 const trackInitialHost = (requestId, host) => {
   if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
-    const firstKey = initialHostByRequest.keys().next().value;
-    initialHostByRequest.delete(firstKey);
+    const now = Date.now();
+    let evictKey = null;
+    for (const [key, entry] of initialHostByRequest) {
+      if (now - entry.trackedAt > REQUEST_TRACK_TTL_MS) {
+        evictKey = key;
+        break;
+      }
+    }
+    if (evictKey === null) {
+      evictKey = initialHostByRequest.keys().next().value;
+    }
+    initialHostByRequest.delete(evictKey);
+    redirectedRequestIds.delete(evictKey);
   }
 
   initialHostByRequest.set(requestId, { host, trackedAt: Date.now() });
@@ -202,16 +233,10 @@ const cleanupStaleTrackedRequests = (now = Date.now()) => {
   for (const [requestId, trackedRequest] of initialHostByRequest.entries()) {
     if (trackedRequest && typeof trackedRequest === "object" && now - trackedRequest.trackedAt > REQUEST_TRACK_TTL_MS) {
       initialHostByRequest.delete(requestId);
+      redirectedRequestIds.delete(requestId);
     }
   }
 };
-
-const CLEANUP_INTERVAL_KEY = "__acceptLangExt_cleanupIntervalId";
-const existingCleanupIntervalId = globalThis[CLEANUP_INTERVAL_KEY];
-if (typeof existingCleanupIntervalId === "number" || typeof existingCleanupIntervalId === "object") {
-  clearInterval(existingCleanupIntervalId);
-}
-globalThis[CLEANUP_INTERVAL_KEY] = setInterval(cleanupStaleTrackedRequests, REQUEST_TRACK_TTL_MS);
 
 const updateExceptionDomains = (domains = []) => {
   exceptionDomains.clear();
@@ -220,25 +245,34 @@ const updateExceptionDomains = (domains = []) => {
     .forEach((domain) => exceptionDomains.add(domain.trim().toLowerCase()));
 };
 
-browser.storage.sync
-  .get(STORAGE_KEY)
-  .then((stored) => {
-    const data = stored[STORAGE_KEY];
-    updateExceptionDomains(Array.isArray(data) ? data : []);
-  })
-  .catch((error) => {
-    console.error("Failed to load exception domains", error);
-    updateExceptionDomains();
+/* istanbul ignore next */
+if (typeof module === "undefined") {
+  const CLEANUP_INTERVAL_KEY = "__acceptLangExt_cleanupIntervalId";
+  const existingCleanupIntervalId = globalThis[CLEANUP_INTERVAL_KEY];
+  if (typeof existingCleanupIntervalId === "number" || typeof existingCleanupIntervalId === "object") {
+    clearInterval(existingCleanupIntervalId);
+  }
+  globalThis[CLEANUP_INTERVAL_KEY] = setInterval(cleanupStaleTrackedRequests, REQUEST_TRACK_TTL_MS);
+
+  browser.storage.sync
+    .get(STORAGE_KEY)
+    .then((stored) => {
+      const data = stored[STORAGE_KEY];
+      updateExceptionDomains(Array.isArray(data) ? data : []);
+    })
+    .catch((error) => {
+      console.error("Failed to load exception domains", error);
+      updateExceptionDomains();
+    });
+
+  browser.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "sync" && changes[STORAGE_KEY]) {
+      const updatedDomains = changes[STORAGE_KEY].newValue;
+      updateExceptionDomains(Array.isArray(updatedDomains) ? updatedDomains : []);
+    }
   });
 
-browser.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === "sync" && changes[STORAGE_KEY]) {
-    const updatedDomains = changes[STORAGE_KEY].newValue;
-    updateExceptionDomains(Array.isArray(updatedDomains) ? updatedDomains : []);
-  }
-});
-
-browser.webRequest.onBeforeRequest.addListener(
+  browser.webRequest.onBeforeRequest.addListener(
   (details) => {
     if (details.type !== "main_frame") {
       return;
@@ -252,15 +286,21 @@ browser.webRequest.onBeforeRequest.addListener(
       const currentHost = new URL(details.url).hostname;
       if (!initialHostByRequest.has(details.requestId)) {
         trackInitialHost(details.requestId, currentHost);
+      } else {
+        // The requestId is already tracked, meaning the browser is following a
+        // same-TLD redirect within this request lifecycle. Mark it so that
+        // onBeforeSendHeaders will apply the Accept-Language override.
+        redirectedRequestIds.add(details.requestId);
       }
     } catch (_error) {
       initialHostByRequest.delete(details.requestId);
+      redirectedRequestIds.delete(details.requestId);
     }
   },
   { urls: ["<all_urls>"], types: ["main_frame"] }
-);
+  );
 
-browser.webRequest.onBeforeSendHeaders.addListener(
+  browser.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
     if (details.type !== "main_frame") {
       return {};
@@ -270,13 +310,16 @@ browser.webRequest.onBeforeSendHeaders.addListener(
       return {};
     }
 
+    // Only override Accept-Language when a redirect has already been observed
+    // for this request. Initial page loads use the browser's real locale to
+    // avoid disclosing TLD navigation intent to every visited site.
+    if (!redirectedRequestIds.has(details.requestId)) {
+      return {};
+    }
+
     let host = "";
     try {
       host = new URL(details.url).hostname;
-
-      if (exceptionDomains.has(getRootDomain(host))) {
-        return {};
-      }
 
       if (isNonRoutableHost(host)) {
         return {};
@@ -311,9 +354,9 @@ browser.webRequest.onBeforeSendHeaders.addListener(
   },
   { urls: ["<all_urls>"], types: ["main_frame"] },
   ["blocking", "requestHeaders"]
-);
+  );
 
-browser.webRequest.onHeadersReceived.addListener(
+  browser.webRequest.onHeadersReceived.addListener(
   (details) => {
     if (details.type !== "main_frame") {
       return {};
@@ -324,7 +367,7 @@ browser.webRequest.onHeadersReceived.addListener(
     }
 
     if (![301, 302, 303, 307, 308].includes(details.statusCode)) {
-      initialHostByRequest.delete(details.requestId);
+      cleanupTrackedRequest(details.requestId);
       return {};
     }
 
@@ -333,46 +376,58 @@ browser.webRequest.onHeadersReceived.addListener(
       return {};
     }
 
+    let parsedRedirect;
+    try {
+      parsedRedirect = new URL(redirectLocation, details.url);
+    } catch (_error) {
+      // Malformed redirect URL — cancel to be safe
+      cleanupTrackedRequest(details.requestId);
+      return { cancel: true };
+    }
+
+    // Reject non-HTTP(S) redirect targets unconditionally (data:, blob:, ftp:, etc.)
+    if (parsedRedirect.protocol !== "http:" && parsedRedirect.protocol !== "https:") {
+      cleanupTrackedRequest(details.requestId);
+      return { cancel: true };
+    }
+
+    const redirectHost = parsedRedirect.hostname;
+
     try {
       const trackedRequest = initialHostByRequest.get(details.requestId);
       const initialHost =
         (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
         new URL(details.url).hostname;
-      const redirectHost = new URL(redirectLocation, details.url).hostname;
       if (exceptionDomains.has(getRootDomain(initialHost)) ||
           exceptionDomains.has(getRootDomain(redirectHost))) {
-        initialHostByRequest.delete(details.requestId);
+        // Keep tracking state so onBeforeRequest marks the subsequent
+        // redirected request in redirectedRequestIds, enabling Accept-Language spoofing.
         return {};
       }
       if (getRootDomain(initialHost) !== getRootDomain(redirectHost)) {
-        initialHostByRequest.delete(details.requestId);
+        cleanupTrackedRequest(details.requestId);
         return { cancel: true };
       }
     } catch (error) {
-      let safeRedirectLocation = redirectLocation;
-      try {
-        const parsedRedirect = new URL(redirectLocation, details.url);
-        safeRedirectLocation = parsedRedirect.origin + parsedRedirect.pathname;
-      } catch (_e) {
-        // URL is malformed; fall back to the raw value already assigned above
-      }
       console.warn(
-        "Failed to parse redirect URL in onHeadersReceived",
+        "Failed to resolve initial host during redirect handling in onHeadersReceived",
         details.url,
-        safeRedirectLocation,
+        `${parsedRedirect.origin}${parsedRedirect.pathname}`,
         error
       );
       const trackedRequest = initialHostByRequest.get(details.requestId);
-      initialHostByRequest.delete(details.requestId);
       try {
         const initialHost =
           (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
           new URL(details.url).hostname;
         if (!exceptionDomains.has(getRootDomain(initialHost))) {
+          cleanupTrackedRequest(details.requestId);
           return { cancel: true };
         }
+        // Exception domain: keep tracking state alive for Accept-Language spoofing on the redirect.
       } catch (cancelError) {
         console.warn("Failed to determine initial host during fail-closed redirect cancellation", details.url, cancelError);
+        cleanupTrackedRequest(details.requestId);
         return { cancel: true };
       }
     }
@@ -381,18 +436,26 @@ browser.webRequest.onHeadersReceived.addListener(
   },
   { urls: ["<all_urls>"], types: ["main_frame"] },
   ["blocking", "responseHeaders"]
-);
+  );
 
-browser.webRequest.onCompleted.addListener(
-  (details) => {
-    initialHostByRequest.delete(details.requestId);
-  },
-  { urls: ["<all_urls>"], types: ["main_frame"] }
-);
+  browser.webRequest.onCompleted.addListener(
+    (details) => {
+      initialHostByRequest.delete(details.requestId);
+      redirectedRequestIds.delete(details.requestId);
+    },
+    { urls: ["<all_urls>"], types: ["main_frame"] }
+  );
 
-browser.webRequest.onErrorOccurred.addListener(
-  (details) => {
-    initialHostByRequest.delete(details.requestId);
-  },
-  { urls: ["<all_urls>"], types: ["main_frame"] }
-);
+  browser.webRequest.onErrorOccurred.addListener(
+    (details) => {
+      initialHostByRequest.delete(details.requestId);
+      redirectedRequestIds.delete(details.requestId);
+    },
+    { urls: ["<all_urls>"], types: ["main_frame"] }
+  );
+}
+
+/* istanbul ignore next */
+if (typeof module === "object" && module !== null) {
+  module.exports = { isNonRoutableHost, buildAcceptLanguage };
+}
