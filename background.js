@@ -30,9 +30,6 @@ const MAX_TRACKED_REQUESTS = 1000;
 /** Time-to-live for a tracked request entry, in milliseconds (60 s). */
 const REQUEST_TRACK_TTL_MS = 60 * 1_000;
 
-/** `browser.storage.sync` key under which exception domains are persisted. */
-const STORAGE_KEY = "exceptionDomains";
-
 /**
  * In-memory set of root domains excluded from redirect blocking.
  * Domains in this set will not have their cross-TLD redirects cancelled.
