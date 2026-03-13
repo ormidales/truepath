@@ -5,6 +5,25 @@
  */
 const initialHostByRequest = new Map();
 
+/**
+ * Tracks request IDs for which at least one redirect has been observed.
+ * Only requests in this set will have their Accept-Language header spoofed.
+ * Cleared on request completion, error, or TTL eviction alongside initialHostByRequest.
+ * @type {Set<string>}
+ */
+const redirectedRequestIds = new Set();
+
+/**
+ * Removes all tracking state associated with a given request ID.
+ * Ensures `initialHostByRequest` and `redirectedRequestIds` stay in sync.
+ *
+ * @param {string} requestId
+ */
+function cleanupTrackedRequest(requestId) {
+  initialHostByRequest.delete(requestId);
+  redirectedRequestIds.delete(requestId);
+}
+
 /** Maximum number of concurrent request IDs tracked before LRU eviction. */
 const MAX_TRACKED_REQUESTS = 1000;
 
@@ -193,6 +212,7 @@ const trackInitialHost = (requestId, host) => {
   if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
     const firstKey = initialHostByRequest.keys().next().value;
     initialHostByRequest.delete(firstKey);
+    redirectedRequestIds.delete(firstKey);
   }
 
   initialHostByRequest.set(requestId, { host, trackedAt: Date.now() });
@@ -202,6 +222,7 @@ const cleanupStaleTrackedRequests = (now = Date.now()) => {
   for (const [requestId, trackedRequest] of initialHostByRequest.entries()) {
     if (trackedRequest && typeof trackedRequest === "object" && now - trackedRequest.trackedAt > REQUEST_TRACK_TTL_MS) {
       initialHostByRequest.delete(requestId);
+      redirectedRequestIds.delete(requestId);
     }
   }
 };
@@ -252,9 +273,15 @@ browser.webRequest.onBeforeRequest.addListener(
       const currentHost = new URL(details.url).hostname;
       if (!initialHostByRequest.has(details.requestId)) {
         trackInitialHost(details.requestId, currentHost);
+      } else {
+        // The requestId is already tracked, meaning the browser is following a
+        // same-TLD redirect within this request lifecycle. Mark it so that
+        // onBeforeSendHeaders will apply the Accept-Language override.
+        redirectedRequestIds.add(details.requestId);
       }
     } catch (_error) {
       initialHostByRequest.delete(details.requestId);
+      redirectedRequestIds.delete(details.requestId);
     }
   },
   { urls: ["<all_urls>"], types: ["main_frame"] }
@@ -267,6 +294,13 @@ browser.webRequest.onBeforeSendHeaders.addListener(
     }
 
     if (!details.url.startsWith("http://") && !details.url.startsWith("https://")) {
+      return {};
+    }
+
+    // Only override Accept-Language when a redirect has already been observed
+    // for this request. Initial page loads use the browser's real locale to
+    // avoid disclosing TLD navigation intent to every visited site.
+    if (!redirectedRequestIds.has(details.requestId)) {
       return {};
     }
 
@@ -324,7 +358,7 @@ browser.webRequest.onHeadersReceived.addListener(
     }
 
     if (![301, 302, 303, 307, 308].includes(details.statusCode)) {
-      initialHostByRequest.delete(details.requestId);
+      cleanupTrackedRequest(details.requestId);
       return {};
     }
 
@@ -338,13 +372,13 @@ browser.webRequest.onHeadersReceived.addListener(
       parsedRedirect = new URL(redirectLocation, details.url);
     } catch (_error) {
       // Malformed redirect URL — cancel to be safe
-      initialHostByRequest.delete(details.requestId);
+      cleanupTrackedRequest(details.requestId);
       return { cancel: true };
     }
 
     // Reject non-HTTP(S) redirect targets unconditionally (data:, blob:, ftp:, etc.)
     if (parsedRedirect.protocol !== "http:" && parsedRedirect.protocol !== "https:") {
-      initialHostByRequest.delete(details.requestId);
+      cleanupTrackedRequest(details.requestId);
       return { cancel: true };
     }
 
@@ -357,11 +391,11 @@ browser.webRequest.onHeadersReceived.addListener(
         new URL(details.url).hostname;
       if (exceptionDomains.has(getRootDomain(initialHost)) ||
           exceptionDomains.has(getRootDomain(redirectHost))) {
-        initialHostByRequest.delete(details.requestId);
+        cleanupTrackedRequest(details.requestId);
         return {};
       }
       if (getRootDomain(initialHost) !== getRootDomain(redirectHost)) {
-        initialHostByRequest.delete(details.requestId);
+        cleanupTrackedRequest(details.requestId);
         return { cancel: true };
       }
     } catch (error) {
@@ -376,13 +410,13 @@ browser.webRequest.onHeadersReceived.addListener(
         const initialHost =
           (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
           new URL(details.url).hostname;
-        initialHostByRequest.delete(details.requestId);
+        cleanupTrackedRequest(details.requestId);
         if (!exceptionDomains.has(getRootDomain(initialHost))) {
           return { cancel: true };
         }
       } catch (cancelError) {
         console.warn("Failed to determine initial host during fail-closed redirect cancellation", details.url, cancelError);
-        initialHostByRequest.delete(details.requestId);
+        cleanupTrackedRequest(details.requestId);
         return { cancel: true };
       }
     }
@@ -396,6 +430,7 @@ browser.webRequest.onHeadersReceived.addListener(
 browser.webRequest.onCompleted.addListener(
   (details) => {
     initialHostByRequest.delete(details.requestId);
+    redirectedRequestIds.delete(details.requestId);
   },
   { urls: ["<all_urls>"], types: ["main_frame"] }
 );
@@ -403,6 +438,7 @@ browser.webRequest.onCompleted.addListener(
 browser.webRequest.onErrorOccurred.addListener(
   (details) => {
     initialHostByRequest.delete(details.requestId);
+    redirectedRequestIds.delete(details.requestId);
   },
   { urls: ["<all_urls>"], types: ["main_frame"] }
 );
