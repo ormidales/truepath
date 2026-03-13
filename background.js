@@ -34,7 +34,9 @@ const REQUEST_TRACK_TTL_MS = 60 * 1_000;
 const STORAGE_KEY = "exceptionDomains";
 
 /**
- * In-memory set of root domains excluded from redirect blocking and header spoofing.
+ * In-memory set of root domains excluded from redirect blocking.
+ * Domains in this set will not have their cross-TLD redirects cancelled.
+ * Accept-Language spoofing still applies to these domains.
  * Populated at startup and kept in sync via `storage.onChanged`.
  * @type {Set<string>}
  */
@@ -319,10 +321,6 @@ browser.webRequest.onBeforeSendHeaders.addListener(
     try {
       host = new URL(details.url).hostname;
 
-      if (exceptionDomains.has(getRootDomain(host))) {
-        return {};
-      }
-
       if (isNonRoutableHost(host)) {
         return {};
       }
@@ -402,7 +400,8 @@ browser.webRequest.onHeadersReceived.addListener(
         new URL(details.url).hostname;
       if (exceptionDomains.has(getRootDomain(initialHost)) ||
           exceptionDomains.has(getRootDomain(redirectHost))) {
-        cleanupTrackedRequest(details.requestId);
+        // Keep tracking state so onBeforeRequest marks the subsequent
+        // redirected request in redirectedRequestIds, enabling Accept-Language spoofing.
         return {};
       }
       if (getRootDomain(initialHost) !== getRootDomain(redirectHost)) {
@@ -421,10 +420,11 @@ browser.webRequest.onHeadersReceived.addListener(
         const initialHost =
           (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
           new URL(details.url).hostname;
-        cleanupTrackedRequest(details.requestId);
         if (!exceptionDomains.has(getRootDomain(initialHost))) {
+          cleanupTrackedRequest(details.requestId);
           return { cancel: true };
         }
+        // Exception domain: keep tracking state alive for Accept-Language spoofing on the redirect.
       } catch (cancelError) {
         console.warn("Failed to determine initial host during fail-closed redirect cancellation", details.url, cancelError);
         cleanupTrackedRequest(details.requestId);
