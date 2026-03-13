@@ -166,12 +166,16 @@ const getRootDomain = (hostname) => {
   }
 
   const labels = hostname.toLowerCase().split(".").filter(Boolean);
-  if (labels.length < 2) {
-    return hostname.toLowerCase();
+  if (labels.length === 0) {
+    return "";
   }
 
   if (labels.some((label) => !LDH_LABEL_REGEX.test(label))) {
     return "";
+  }
+
+  if (labels.length < 2) {
+    return labels[0];
   }
 
   const candidate2 = labels.slice(-2).join(".");
