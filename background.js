@@ -333,12 +333,28 @@ browser.webRequest.onHeadersReceived.addListener(
       return {};
     }
 
+    let parsedRedirect;
+    try {
+      parsedRedirect = new URL(redirectLocation, details.url);
+    } catch (_error) {
+      // Malformed redirect URL — cancel to be safe
+      initialHostByRequest.delete(details.requestId);
+      return { cancel: true };
+    }
+
+    // Reject non-HTTP(S) redirect targets unconditionally (data:, blob:, ftp:, etc.)
+    if (parsedRedirect.protocol !== "http:" && parsedRedirect.protocol !== "https:") {
+      initialHostByRequest.delete(details.requestId);
+      return { cancel: true };
+    }
+
+    const redirectHost = parsedRedirect.hostname;
+
     try {
       const trackedRequest = initialHostByRequest.get(details.requestId);
       const initialHost =
         (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
         new URL(details.url).hostname;
-      const redirectHost = new URL(redirectLocation, details.url).hostname;
       if (exceptionDomains.has(getRootDomain(initialHost)) ||
           exceptionDomains.has(getRootDomain(redirectHost))) {
         initialHostByRequest.delete(details.requestId);
@@ -349,30 +365,24 @@ browser.webRequest.onHeadersReceived.addListener(
         return { cancel: true };
       }
     } catch (error) {
-      let safeRedirectLocation = redirectLocation;
-      try {
-        const parsedRedirect = new URL(redirectLocation, details.url);
-        safeRedirectLocation = parsedRedirect.origin + parsedRedirect.pathname;
-      } catch (_e) {
-        // URL is malformed; fall back to the raw value already assigned above
-      }
       console.warn(
-        "Failed to parse redirect URL in onHeadersReceived",
+        "Failed to resolve initial host during redirect handling in onHeadersReceived",
         details.url,
-        safeRedirectLocation,
+        `${parsedRedirect.origin}${parsedRedirect.pathname}`,
         error
       );
       const trackedRequest = initialHostByRequest.get(details.requestId);
-      initialHostByRequest.delete(details.requestId);
       try {
         const initialHost =
           (trackedRequest && typeof trackedRequest === "object" ? trackedRequest.host : trackedRequest) ||
           new URL(details.url).hostname;
+        initialHostByRequest.delete(details.requestId);
         if (!exceptionDomains.has(getRootDomain(initialHost))) {
           return { cancel: true };
         }
       } catch (cancelError) {
         console.warn("Failed to determine initial host during fail-closed redirect cancellation", details.url, cancelError);
+        initialHostByRequest.delete(details.requestId);
         return { cancel: true };
       }
     }
