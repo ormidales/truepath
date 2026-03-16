@@ -144,6 +144,12 @@ const addCurrentDomain = async () => {
   }
 };
 
+/**
+ * Resets the two-step clear-confirmation state machine to its idle state.
+ * Cancels any pending auto-reset timeout, restores the clear button's default
+ * label, and hides the cancel button.
+ * Called both on explicit cancel and after a successful clear operation.
+ */
 const resetClearConfirm = () => {
   isClearConfirming = false;
   if (clearConfirmTimeoutId !== null) {
