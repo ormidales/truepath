@@ -198,5 +198,5 @@ const getRootDomain = (hostname) => {
 
 /* istanbul ignore next */
 if (typeof module === "object" && module !== null) {
-  module.exports = { IPV4_REGEX, IPV6_REGEX, stripIPv6Brackets, getRootDomain };
+  module.exports = { STORAGE_KEY, IPV4_REGEX, IPV6_REGEX, stripIPv6Brackets, getRootDomain };
 }

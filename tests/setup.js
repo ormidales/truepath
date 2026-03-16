@@ -8,6 +8,7 @@
 
 // Expose utils.js constants as globals so background.js can reference them.
 const utils = require("../utils.js");
+global.STORAGE_KEY = utils.STORAGE_KEY;
 global.IPV4_REGEX = utils.IPV4_REGEX;
 global.IPV6_REGEX = utils.IPV6_REGEX;
 global.stripIPv6Brackets = utils.stripIPv6Brackets;
