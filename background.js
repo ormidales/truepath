@@ -24,11 +24,23 @@ function cleanupTrackedRequest(requestId) {
   redirectedRequestIds.delete(requestId);
 }
 
-/** Maximum number of concurrent request IDs tracked before LRU eviction. */
+/**
+ * Maximum number of concurrent request IDs tracked before LRU eviction.
+ * Chosen to comfortably cover burst tab-open scenarios (e.g. restoring a
+ * session with many tabs) while keeping memory overhead negligible.
+ * Increase only if profiling shows eviction occurring under normal usage.
+ * @type {number}
+ */
 const MAX_TRACKED_REQUESTS = 1000;
 
-/** Time-to-live for a tracked request entry, in milliseconds (60 s). */
-const REQUEST_TRACK_TTL_MS = 60 * 1_000;
+/**
+ * Time-to-live for a tracked request entry, in milliseconds.
+ * Requests stalled longer than this value (e.g. due to slow DNS or a hanging
+ * server) are considered abandoned and become candidates for eviction.
+ * Should be longer than any realistic page-load timeout.
+ * @type {number}
+ */
+const REQUEST_TRACK_TTL_MS = 60 * 1_000; // 60 seconds
 
 /**
  * In-memory set of root domains excluded from redirect blocking.
