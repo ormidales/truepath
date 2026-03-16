@@ -6,13 +6,16 @@
  * browser (where both scripts are loaded in the same page context via manifest).
  */
 
-// Expose utils.js constants as globals so background.js can reference them.
+// Expose utils.js helpers as globals to replicate the browser execution context,
+// where utils.js and background.js share the same page scope via the manifest.
+// stripIPv6Brackets is required by isNonRoutableHost() in background.js to
+// normalise bare/bracketed IPv6 addresses before prefix comparisons.
 const utils = require("../utils.js");
-global.STORAGE_KEY = utils.STORAGE_KEY;
-global.IPV4_REGEX = utils.IPV4_REGEX;
-global.IPV6_REGEX = utils.IPV6_REGEX;
-global.stripIPv6Brackets = utils.stripIPv6Brackets;
-global.getRootDomain = utils.getRootDomain;
+global.STORAGE_KEY       = utils.STORAGE_KEY;
+global.IPV4_REGEX        = utils.IPV4_REGEX;
+global.IPV6_REGEX        = utils.IPV6_REGEX;
+global.stripIPv6Brackets = utils.stripIPv6Brackets; // used by isNonRoutableHost()
+global.getRootDomain     = utils.getRootDomain;
 
 const mockListener = { addListener: jest.fn() };
 
