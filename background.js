@@ -17,7 +17,7 @@ const redirectedRequestIds = new Set();
  * Removes all tracking state associated with a given request ID.
  * Ensures `initialHostByRequest` and `redirectedRequestIds` stay in sync.
  *
- * @param {string} requestId
+ * @param {string} requestId The WebExtensions request identifier to clean up.
  */
 function cleanupTrackedRequest(requestId) {
   initialHostByRequest.delete(requestId);
