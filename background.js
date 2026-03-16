@@ -42,8 +42,8 @@ const exceptionDomains = new Set();
 /**
  * Fallback Accept-Language header value used when no TLD-specific mapping is found
  * in ACCEPT_LANGUAGE_BY_TLD. Follows RFC 4647 / HTTP Accept-Language syntax.
- * Returned by buildAcceptLanguage() for IP addresses, single-label hostnames,
- * and TLDs not present in ACCEPT_LANGUAGE_BY_TLD.
+ * Returned by buildAcceptLanguage() for IP addresses and hostnames whose
+ * derived TLD is not present in ACCEPT_LANGUAGE_BY_TLD.
  *
  * @type {string}
  */
