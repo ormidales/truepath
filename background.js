@@ -17,18 +17,30 @@ const redirectedRequestIds = new Set();
  * Removes all tracking state associated with a given request ID.
  * Ensures `initialHostByRequest` and `redirectedRequestIds` stay in sync.
  *
- * @param {string} requestId
+ * @param {string} requestId The WebExtensions request identifier to clean up.
  */
 function cleanupTrackedRequest(requestId) {
   initialHostByRequest.delete(requestId);
   redirectedRequestIds.delete(requestId);
 }
 
-/** Maximum number of concurrent request IDs tracked before LRU eviction. */
+/**
+ * Maximum number of concurrent request IDs tracked before LRU eviction.
+ * Chosen to comfortably cover burst tab-open scenarios (e.g. restoring a
+ * session with many tabs) while keeping memory overhead negligible.
+ * Increase only if profiling shows eviction occurring under normal usage.
+ * @type {number}
+ */
 const MAX_TRACKED_REQUESTS = 1000;
 
-/** Time-to-live for a tracked request entry, in milliseconds (60 s). */
-const REQUEST_TRACK_TTL_MS = 60 * 1_000;
+/**
+ * Time-to-live for a tracked request entry, in milliseconds.
+ * Requests stalled longer than this value (e.g. due to slow DNS or a hanging
+ * server) are considered abandoned and become candidates for eviction.
+ * Should be longer than any realistic page-load timeout.
+ * @type {number}
+ */
+const REQUEST_TRACK_TTL_MS = 60 * 1_000; // 60 seconds
 
 /**
  * In-memory set of root domains excluded from redirect blocking.
@@ -40,8 +52,12 @@ const REQUEST_TRACK_TTL_MS = 60 * 1_000;
 const exceptionDomains = new Set();
 
 /**
- * Fallback Accept-Language value used when no TLD-specific mapping is found.
- * Follows RFC 4647 syntax.
+ * Fallback Accept-Language header value used when no TLD-specific mapping is found
+ * in ACCEPT_LANGUAGE_BY_TLD. Follows RFC 4647 / HTTP Accept-Language syntax.
+ * Returned by buildAcceptLanguage() for IP addresses and hostnames whose
+ * derived TLD is not present in ACCEPT_LANGUAGE_BY_TLD.
+ *
+ * @type {string}
  */
 const DEFAULT_ACCEPT_LANGUAGE = "en-US,en;q=0.9";
 
