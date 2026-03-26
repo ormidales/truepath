@@ -254,6 +254,14 @@ const cleanupStaleTrackedRequests = (now = Date.now()) => {
   }
 };
 
+/**
+ * Rebuilds the in-memory {@link exceptionDomains} set from the provided list.
+ * Called at extension startup and whenever `storage.onChanged` fires for
+ * {@link STORAGE_KEY}. Entries that are not non-empty strings are silently
+ * ignored; all retained values are trimmed and lowercased.
+ *
+ * @param {string[]} [domains=[]] Array of domain strings from `browser.storage.sync`.
+ */
 const updateExceptionDomains = (domains = []) => {
   exceptionDomains.clear();
   domains
