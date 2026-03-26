@@ -43,6 +43,16 @@ describe("getRootDomain — IPv6 addresses returned as-is", () => {
   });
 });
 
+describe("getRootDomain — 4-label hostname with known 2-label suffix", () => {
+  test('getRootDomain("shop.example.co.uk") returns "example.co.uk"', () => {
+    expect(getRootDomain("shop.example.co.uk")).toBe("example.co.uk");
+  });
+
+  test('getRootDomain("www.store.com.br") returns "store.com.br"', () => {
+    expect(getRootDomain("www.store.com.br")).toBe("store.com.br");
+  });
+});
+
 describe("isNonRoutableHost — unspecified IPv6 address (::)", () => {
   test('isNonRoutableHost("::") returns true', () => {
     expect(isNonRoutableHost("::")).toBe(true);

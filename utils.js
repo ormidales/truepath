@@ -182,6 +182,8 @@ const getRootDomain = (hostname) => {
   }
 
   const candidate2 = labels.slice(-2).join(".");
+  // KNOWN_MULTI_PART_SUFFIXES currently contains only 2-label suffixes (e.g. "co.uk").
+  // The candidate3 branch below is reserved for future 3-label public suffix support.
   if (labels.length >= 4) {
     const candidate3 = labels.slice(-3).join(".");
     if (KNOWN_MULTI_PART_SUFFIXES.has(candidate3)) {
