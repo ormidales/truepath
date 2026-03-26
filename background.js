@@ -228,18 +228,22 @@ const buildAcceptLanguage = (hostname) => {
 const trackInitialHost = (requestId, host) => {
   if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
     const now = Date.now();
-    let evictKey = null;
+    const staleKeys = [];
     for (const [key, entry] of initialHostByRequest) {
       if (now - entry.trackedAt > REQUEST_TRACK_TTL_MS) {
-        evictKey = key;
-        break;
+        staleKeys.push(key);
       }
     }
-    if (evictKey === null) {
-      evictKey = initialHostByRequest.keys().next().value;
+    if (staleKeys.length > 0) {
+      for (const key of staleKeys) {
+        initialHostByRequest.delete(key);
+        redirectedRequestIds.delete(key);
+      }
+    } else {
+      const evictKey = initialHostByRequest.keys().next().value;
+      initialHostByRequest.delete(evictKey);
+      redirectedRequestIds.delete(evictKey);
     }
-    initialHostByRequest.delete(evictKey);
-    redirectedRequestIds.delete(evictKey);
   }
 
   initialHostByRequest.set(requestId, { host, trackedAt: Date.now() });
@@ -484,9 +488,11 @@ if (typeof module === "object" && module !== null) {
   module.exports = {
     isNonRoutableHost,
     buildAcceptLanguage,
+    trackInitialHost,
     cleanupStaleTrackedRequests,
     initialHostByRequest,
     redirectedRequestIds,
     REQUEST_TRACK_TTL_MS,
+    MAX_TRACKED_REQUESTS,
   };
 }
