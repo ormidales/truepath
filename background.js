@@ -473,5 +473,12 @@ if (typeof module === "undefined") {
 
 /* istanbul ignore next */
 if (typeof module === "object" && module !== null) {
-  module.exports = { isNonRoutableHost, buildAcceptLanguage };
+  module.exports = {
+    isNonRoutableHost,
+    buildAcceptLanguage,
+    cleanupStaleTrackedRequests,
+    initialHostByRequest,
+    redirectedRequestIds,
+    REQUEST_TRACK_TTL_MS,
+  };
 }
