@@ -202,6 +202,8 @@ const isNonRoutableHost = (hostname) => {
  * buildAcceptLanguage("shop.example.de") // → "de-DE,de;q=0.9,en;q=0.7"
  * buildAcceptLanguage("app.example.io")  // → "en-US,en;q=0.9" (unknown TLD fallback)
  * buildAcceptLanguage("192.168.1.1")     // → "en-US,en;q=0.9" (IPv4 fallback)
+ * buildAcceptLanguage("[::1]")           // → "en-US,en;q=0.9" (bracketed IPv6 fallback)
+ * buildAcceptLanguage("::1")             // → "en-US,en;q=0.9" (bare IPv6 fallback)
  */
 const buildAcceptLanguage = (hostname) => {
   if (IPV4_REGEX.test(hostname) || IPV6_REGEX.test(hostname)) {
@@ -488,6 +490,7 @@ if (typeof module === "object" && module !== null) {
   module.exports = {
     isNonRoutableHost,
     buildAcceptLanguage,
+    DEFAULT_ACCEPT_LANGUAGE,
     trackInitialHost,
     cleanupStaleTrackedRequests,
     initialHostByRequest,
