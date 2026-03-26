@@ -1,7 +1,7 @@
 "use strict";
 
 const { IPV6_REGEX, getRootDomain } = require("../utils.js");
-const { isNonRoutableHost } = require("../background.js");
+const { isNonRoutableHost, buildAcceptLanguage, DEFAULT_ACCEPT_LANGUAGE } = require("../background.js");
 
 describe("IPV6_REGEX — all-zeros compressed address (::)", () => {
   test('matches "::" (bare unspecified address)', () => {
@@ -110,5 +110,15 @@ describe("isNonRoutableHost — full 8-group IPv6 address", () => {
 
   test('isNonRoutableHost("[2001:0db8:85a3:0000:0000:8a2e:0370:7334]") returns false (bracketed documentation prefix, non-private)', () => {
     expect(isNonRoutableHost("[2001:0db8:85a3:0000:0000:8a2e:0370:7334]")).toBe(false);
+  });
+});
+
+describe("buildAcceptLanguage — IPv6 addresses return DEFAULT_ACCEPT_LANGUAGE", () => {
+  test('buildAcceptLanguage("[::1]") returns DEFAULT_ACCEPT_LANGUAGE (bracketed IPv6 fallback)', () => {
+    expect(buildAcceptLanguage("[::1]")).toBe(DEFAULT_ACCEPT_LANGUAGE);
+  });
+
+  test('buildAcceptLanguage("::1") returns DEFAULT_ACCEPT_LANGUAGE (bare IPv6 fallback)', () => {
+    expect(buildAcceptLanguage("::1")).toBe(DEFAULT_ACCEPT_LANGUAGE);
   });
 });
