@@ -202,6 +202,8 @@ const isNonRoutableHost = (hostname) => {
  * buildAcceptLanguage("shop.example.de") // → "de-DE,de;q=0.9,en;q=0.7"
  * buildAcceptLanguage("app.example.io")  // → "en-US,en;q=0.9" (unknown TLD fallback)
  * buildAcceptLanguage("192.168.1.1")     // → "en-US,en;q=0.9" (IPv4 fallback)
+ * buildAcceptLanguage("[::1]")           // → "en-US,en;q=0.9" (bracketed IPv6 fallback)
+ * buildAcceptLanguage("::1")             // → "en-US,en;q=0.9" (bare IPv6 fallback)
  */
 const buildAcceptLanguage = (hostname) => {
   if (IPV4_REGEX.test(hostname) || IPV6_REGEX.test(hostname)) {
@@ -213,38 +215,6 @@ const buildAcceptLanguage = (hostname) => {
   return ACCEPT_LANGUAGE_BY_TLD.get(tld) || DEFAULT_ACCEPT_LANGUAGE;
 };
 
-/**
- * Records the initial hostname for a given request ID to allow cross-redirect
- * domain comparison in onHeadersReceived.
- *
- * When the map reaches MAX_TRACKED_REQUESTS, eviction prefers the oldest
- * TTL-expired entry so that live (in-flight) requests are not prematurely
- * removed during burst traffic. Falls back to evicting the oldest-inserted
- * entry only when no stale entry exists, bounding memory usage.
- *
- * @param {string} requestId The WebExtensions request identifier.
- * @param {string} host      The hostname from the original request URL.
- */
-const trackInitialHost = (requestId, host) => {
-  if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
-    const now = Date.now();
-    let evictKey = null;
-    for (const [key, entry] of initialHostByRequest) {
-      if (now - entry.trackedAt > REQUEST_TRACK_TTL_MS) {
-        evictKey = key;
-        break;
-      }
-    }
-    if (evictKey === null) {
-      evictKey = initialHostByRequest.keys().next().value;
-    }
-    initialHostByRequest.delete(evictKey);
-    redirectedRequestIds.delete(evictKey);
-  }
-
-  initialHostByRequest.set(requestId, { host, trackedAt: Date.now() });
-};
-
 const cleanupStaleTrackedRequests = (now = Date.now()) => {
   for (const [requestId, trackedRequest] of initialHostByRequest.entries()) {
     if (trackedRequest && typeof trackedRequest === "object" && now - trackedRequest.trackedAt > REQUEST_TRACK_TTL_MS) {
@@ -254,6 +224,40 @@ const cleanupStaleTrackedRequests = (now = Date.now()) => {
   }
 };
 
+/**
+ * Records the initial hostname for a given request ID to allow cross-redirect
+ * domain comparison in onHeadersReceived.
+ *
+ * When the map reaches MAX_TRACKED_REQUESTS, eviction first delegates to
+ * {@link cleanupStaleTrackedRequests} to bulk-remove TTL-expired entries.
+ * Falls back to evicting the oldest-inserted entry only when no stale entry
+ * exists, bounding memory usage.
+ *
+ * @param {string} requestId The WebExtensions request identifier.
+ * @param {string} host      The hostname from the original request URL.
+ */
+const trackInitialHost = (requestId, host) => {
+  if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
+    const now = Date.now();
+    cleanupStaleTrackedRequests(now);
+    if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
+      const evictKey = initialHostByRequest.keys().next().value;
+      initialHostByRequest.delete(evictKey);
+      redirectedRequestIds.delete(evictKey);
+    }
+  }
+
+  initialHostByRequest.set(requestId, { host, trackedAt: Date.now() });
+};
+
+/**
+ * Rebuilds the in-memory {@link exceptionDomains} set from the provided list.
+ * Called at extension startup and whenever `storage.onChanged` fires for
+ * {@link STORAGE_KEY}. Entries that are not non-empty strings are silently
+ * ignored; all retained values are trimmed and lowercased.
+ *
+ * @param {string[]} [domains=[]] Array of domain strings from `browser.storage.sync`.
+ */
 const updateExceptionDomains = (domains = []) => {
   exceptionDomains.clear();
   domains
@@ -473,5 +477,15 @@ if (typeof module === "undefined") {
 
 /* istanbul ignore next */
 if (typeof module === "object" && module !== null) {
-  module.exports = { isNonRoutableHost, buildAcceptLanguage };
+  module.exports = {
+    isNonRoutableHost,
+    buildAcceptLanguage,
+    DEFAULT_ACCEPT_LANGUAGE,
+    trackInitialHost,
+    cleanupStaleTrackedRequests,
+    initialHostByRequest,
+    redirectedRequestIds,
+    REQUEST_TRACK_TTL_MS,
+    MAX_TRACKED_REQUESTS,
+  };
 }
