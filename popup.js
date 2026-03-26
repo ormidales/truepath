@@ -195,7 +195,19 @@ const clearDomains = async () => {
   }
 
   resetClearConfirm();
-  await browser.storage.sync.set({ [STORAGE_KEY]: [] });
+  try {
+    await browser.storage.sync.set({ [STORAGE_KEY]: [] });
+  } catch (error) {
+    const errorMessage = typeof error?.message === "string" ? error.message : "";
+    const isQuotaError = /quota/i.test(errorMessage);
+    setStatus(
+      isQuotaError
+        ? browser.i18n.getMessage("statusQuotaError")
+        : browser.i18n.getMessage("statusStorageError"),
+      true
+    );
+    return;
+  }
   setStatus(browser.i18n.getMessage("statusListCleared"));
   await renderList();
   const addButton = document.getElementById("add-domain");
