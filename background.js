@@ -215,42 +215,6 @@ const buildAcceptLanguage = (hostname) => {
   return ACCEPT_LANGUAGE_BY_TLD.get(tld) || DEFAULT_ACCEPT_LANGUAGE;
 };
 
-/**
- * Records the initial hostname for a given request ID to allow cross-redirect
- * domain comparison in onHeadersReceived.
- *
- * When the map reaches MAX_TRACKED_REQUESTS, eviction prefers the oldest
- * TTL-expired entry so that live (in-flight) requests are not prematurely
- * removed during burst traffic. Falls back to evicting the oldest-inserted
- * entry only when no stale entry exists, bounding memory usage.
- *
- * @param {string} requestId The WebExtensions request identifier.
- * @param {string} host      The hostname from the original request URL.
- */
-const trackInitialHost = (requestId, host) => {
-  if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
-    const now = Date.now();
-    const staleKeys = [];
-    for (const [key, entry] of initialHostByRequest) {
-      if (now - entry.trackedAt > REQUEST_TRACK_TTL_MS) {
-        staleKeys.push(key);
-      }
-    }
-    if (staleKeys.length > 0) {
-      for (const key of staleKeys) {
-        initialHostByRequest.delete(key);
-        redirectedRequestIds.delete(key);
-      }
-    } else {
-      const evictKey = initialHostByRequest.keys().next().value;
-      initialHostByRequest.delete(evictKey);
-      redirectedRequestIds.delete(evictKey);
-    }
-  }
-
-  initialHostByRequest.set(requestId, { host, trackedAt: Date.now() });
-};
-
 const cleanupStaleTrackedRequests = (now = Date.now()) => {
   for (const [requestId, trackedRequest] of initialHostByRequest.entries()) {
     if (trackedRequest && typeof trackedRequest === "object" && now - trackedRequest.trackedAt > REQUEST_TRACK_TTL_MS) {
@@ -258,6 +222,32 @@ const cleanupStaleTrackedRequests = (now = Date.now()) => {
       redirectedRequestIds.delete(requestId);
     }
   }
+};
+
+/**
+ * Records the initial hostname for a given request ID to allow cross-redirect
+ * domain comparison in onHeadersReceived.
+ *
+ * When the map reaches MAX_TRACKED_REQUESTS, eviction first delegates to
+ * {@link cleanupStaleTrackedRequests} to bulk-remove TTL-expired entries.
+ * Falls back to evicting the oldest-inserted entry only when no stale entry
+ * exists, bounding memory usage.
+ *
+ * @param {string} requestId The WebExtensions request identifier.
+ * @param {string} host      The hostname from the original request URL.
+ */
+const trackInitialHost = (requestId, host) => {
+  if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
+    const now = Date.now();
+    cleanupStaleTrackedRequests(now);
+    if (initialHostByRequest.size >= MAX_TRACKED_REQUESTS) {
+      const evictKey = initialHostByRequest.keys().next().value;
+      initialHostByRequest.delete(evictKey);
+      redirectedRequestIds.delete(evictKey);
+    }
+  }
+
+  initialHostByRequest.set(requestId, { host, trackedAt: Date.now() });
 };
 
 /**

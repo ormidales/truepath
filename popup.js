@@ -14,6 +14,13 @@ const getStoredDomains = async () => {
     : [];
 };
 
+const getStorageErrorMessage = (error) => {
+  const errorMessage = typeof error?.message === "string" ? error.message : "";
+  return /quota/i.test(errorMessage)
+    ? browser.i18n.getMessage("statusQuotaError")
+    : browser.i18n.getMessage("statusStorageError");
+};
+
 const setStatus = (message, isError = false) => {
   const status = document.getElementById("status");
   status.textContent = message;
@@ -117,14 +124,7 @@ const addCurrentDomain = async () => {
     try {
       await browser.storage.sync.set({ [STORAGE_KEY]: [...domains, normalizedCurrentDomain] });
     } catch (error) {
-      const errorMessage = typeof error?.message === "string" ? error.message : "";
-      const isQuotaError = /quota/i.test(errorMessage);
-      setStatus(
-        isQuotaError
-          ? browser.i18n.getMessage("statusQuotaError")
-          : browser.i18n.getMessage("statusStorageError"),
-        true
-      );
+      setStatus(getStorageErrorMessage(error), true);
       return;
     }
     setStatus(browser.i18n.getMessage("statusAdded"));
@@ -198,14 +198,7 @@ const clearDomains = async () => {
   try {
     await browser.storage.sync.set({ [STORAGE_KEY]: [] });
   } catch (error) {
-    const errorMessage = typeof error?.message === "string" ? error.message : "";
-    const isQuotaError = /quota/i.test(errorMessage);
-    setStatus(
-      isQuotaError
-        ? browser.i18n.getMessage("statusQuotaError")
-        : browser.i18n.getMessage("statusStorageError"),
-      true
-    );
+    setStatus(getStorageErrorMessage(error), true);
     return;
   }
   setStatus(browser.i18n.getMessage("statusListCleared"));
